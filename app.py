@@ -8,7 +8,7 @@ from supabase import create_client, Client
 # --- 1. CONFIG ---
 st.set_page_config(page_title="NomNom Stories", page_icon="🌙", layout="wide")
 
-# --- 2. TRANSLATIONS (FIXED) ---
+# --- 2. TRANSLATIONS (БЕЗ КОММЕНТАРИЕВ) ---
 lang_dict = {
     "Русский": {
         "title": "✨ NomNom Stories (GPT-5.3 PRO)",
@@ -46,25 +46,23 @@ lang_dict = {
     }
 }
 
-# --- 3. СТИЛИ (ИСПРАВЛЕННАЯ СЕТКА) ---
+# --- 3. СТИЛИ (ЯРКИЕ ЧЕКБОКСЫ) ---
 st.markdown("""
     <style>
     .stApp { background: #0a0f1e; color: #f8fafc; }
     [data-testid="stSidebar"] { background-color: #111827 !important; border-right: 2px solid #38bdf8; }
     
     /* Кнопки Длительности */
-    div[data-testid="stHorizontalBlock"] div.stButton > button {
-        height: 60px !important;
-        width: 100% !important;
-        border-radius: 12px !important;
-        border: 2px solid #38bdf8 !important;
-        background-color: #1e293b !important;
-        margin-bottom: 10px;
-    }
-
+    div[data-testid="stHorizontalBlock"] div.stButton > button { height: 60px !important; width: 100% !important; border-radius: 12px !important; border: 2px solid #38bdf8 !important; background-color: #1e293b !important; margin-bottom: 10px; }
     div.stButton > button p { color: #FFFFFF !important; font-weight: 800 !important; font-size: 16px !important; }
     
-    /* Чекбоксы */
+    /* --- НОВОЕ: ЯРКИЙ ТЕКСТ У ГАЛОЧЕК --- */
+    .stCheckbox label p { 
+        color: #FFFFFF !important; 
+        font-weight: 800 !important; 
+        font-size: 16px !important; 
+        text-shadow: 0px 0px 5px rgba(56, 189, 248, 0.5); /* Добавил свечение */
+    }
     .stCheckbox { background: #1e293b; padding: 15px; border-radius: 10px; border: 1px solid #38bdf8; margin-bottom: 10px; }
     
     .story-output { background: #ffffff; color: #1e293b !important; padding: 40px; border-radius: 30px; font-size: 1.25em; line-height: 1.8; white-space: pre-wrap; }
@@ -139,7 +137,6 @@ else:
         st.title(T['title'])
         cn = st.text_input(T['child_name'], value="Даша")
         
-        # Переключение языка (сразу обновляет интерфейс)
         new_lang = st.selectbox("Language / Язык", ["Русский", "English"], index=0 if st.session_state.sel_lang == "Русский" else 1)
         if new_lang != st.session_state.sel_lang:
             st.session_state.sel_lang = new_lang
@@ -147,11 +144,6 @@ else:
 
         st.write(T['skills_label'])
         skills = st.multiselect("", T['skills'], default=[T['skills'][0]])
-        
-        # Настройки генерации в красивых блоках
-        c1, c2 = st.columns(2)
-        with c1: gen_img = st.checkbox(T['opt_img'], value=True)
-        with c2: pre_audio = st.checkbox(T['opt_audio'], value=False)
         
         st.write(T['duration'])
         t_cols = st.columns(3)
@@ -163,6 +155,11 @@ else:
                 st.rerun()
 
         details = st.text_area(T['details'])
+        
+        # --- ЯРКИЕ ЧЕКБОКСЫ ВЫБОРА ---
+        c1, c2 = st.columns(2)
+        with c1: gen_img = st.checkbox(T['opt_img'], value=True)
+        with c2: pre_audio = st.checkbox(T['opt_audio'], value=False)
 
         if st.button(T['btn_create'], type="primary", use_container_width=True):
             try:
