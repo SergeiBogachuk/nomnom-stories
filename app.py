@@ -35,8 +35,6 @@ def generate_premium_audio(text):
     response = requests.post(url, json=data, headers=headers)
     if response.status_code == 200:
         st.audio(response.content, format="audio/mp3")
-    else:
-        st.error(f"Ошибка озвучки: {response.text}")
 
 # --- ИНТЕРФЕЙС ---
 if 'theme_idx' not in st.session_state: st.session_state.theme_idx = 0
@@ -47,73 +45,48 @@ col1, col2 = st.columns(2)
 with col1: name = st.text_input("Имя ребенка", value="Даша")
 with col2: lang = st.selectbox("Язык", ["Русский", "English"])
 
-story_minutes = st.select_slider(
-    "⏳ Длительность сказки (в минутах)",
-    options=[1, 3, 5, 10, 15, 20, 30, 45, 60],
-    value=10
-)
+story_minutes = st.select_slider("⏳ Длительность сказки", options=[1, 3, 5, 10, 15, 20, 30, 45, 60], value=15)
 
 st.divider()
-st.subheader("🎯 Тема сказки")
-cols = st.columns(3)
 themes = ["🛡️ Храбрость", "🍎 Привычки", "🤝 Отношения"]
+cols = st.columns(3)
 for i in range(3):
     with cols[i]:
-        active = "primary" if st.session_state.theme_idx == i else "secondary"
-        if st.button(themes[i], key=f"t_{i}", type=active, use_container_width=True):
+        if st.button(themes[i], key=f"t_{i}", type="primary" if st.session_state.theme_idx == i else "secondary", use_container_width=True):
             st.session_state.theme_idx = i
             st.rerun()
 
 details = st.text_area("✍️ Опиши ситуацию:")
 
-if st.button("✨ СОЗДАТЬ ЖИВУЮ СКАЗКУ ✨", type="primary", use_container_width=True):
-    with st.spinner(f"Марина пишет очень длинную историю на {story_minutes} мин..."):
+if st.button("✨ СОЗДАТЬ БОЛЬШУЮ СКАЗКУ ✨", type="primary", use_container_width=True):
+    with st.spinner("Марина пишет книгу по главам... Это займет около минуты."):
         try:
             curr_theme = themes[st.session_state.theme_idx]
-            full_story = ""
             
-            # --- ЛОГИКА ГЕНЕРАЦИИ ДЛИННОГО ТЕКСТА ---
-            if story_minutes >= 15:
-                # 1. Сначала просим подробный план
-                plan_res = client.chat.completions.create(
-                    model="gpt-4o",
-                    messages=[{"role": "user", "content": f"Составь подробный план сказки из 4 глав для {name} на {story_minutes} минут. Тема: {curr_theme}. Ситуация: {details}."}]
-                )
-                plan = plan_res.choices[0].message.content
-                
-                # 2. Пишем первую часть
-                part1 = client.chat.completions.create(
-                    model="gpt-4o",
-                    messages=[{"role": "user", "content": f"Напиши начало и первые две главы сказки по этому плану: {plan}. Пиши максимально подробно, с диалогами и описаниями природы и чувств героя. Минимум 1500 слов."}]
-                )
-                full_story += part1.choices[0].message.content
-                
-                # 3. Пишем вторую часть
-                part2 = client.chat.completions.create(
-                    model="gpt-4o",
-                    messages=[{"role": "user", "content": f"Продолжи сказку для {name}. Вот начало: {full_story[:500]}. Напиши финальные главы и ласковый вывод. Пиши очень много и подробно."}]
-                )
-                full_story += "\n\n" + part2.choices[0].message.content
-            else:
-                # Для коротких сказок (до 10 минут) обычный запрос
-                res = client.chat.completions.create(
-                    model="gpt-4o",
-                    messages=[{"role": "user", "content": f"Напиши сказку для {name} на {story_minutes} минут. Тема: {curr_theme}. Ситуация: {details}. Будь максимально многословен."}]
-                )
-                full_story = res.choices[0].message.content
-
-            # --- ВЫВОД КАРТИНКИ ---
-            img_res = client.images.generate(model="dall-e-3", prompt=f"Pixar illustration: {curr_theme}, child {name}.")
+            # ШАГ 1: Создаем подробный план на 4 главы
+            plan_prompt = f"Составь подробный план сказки из 4 глав для {name}. Тема: {curr_theme}. Ситуация: {details}. План должен быть на языке {lang}."
+            plan_res = client.chat.completions.create(model="gpt-4o", messages=[{"role": "user", "content": plan_prompt}])
+            plan = plan_res.choices[0].message.content
+            
+            full_story = ""
+            chapters_count = 4 if story_minutes >= 15 else 2 if story_minutes >= 5 else 1
+            
+            # ШАГ 2: Генерируем каждую главу отдельно для объема
+            for i in range(chapters_count):
+                chapter_prompt = f"Напиши главу {i+1} сказки для {name} по этому плану: {plan}. Это должна быть очень длинная глава с множеством диалогов и описаний. Если это последняя глава, добавь ласковое поучение в конце. Предыдущий текст: {full_story[-500:]}"
+                ch_res = client.chat.completions.create(model="gpt-4o", messages=[{"role": "user", "content": chapter_prompt}])
+                chapter_text = ch_res.choices[0].message.content
+                full_story += "\n\n" + chapter_text
+            
+            # Картинка
+            img_res = client.images.generate(model="dall-e-3", prompt=f"Cozy Pixar illustration: {curr_theme}, child {name}.")
             st.image(img_res.data[0].url, use_container_width=True)
 
-            # --- ОЗВУЧКА МАРИНОЙ ---
-            st.subheader(f"🎙️ Слушаем сказку:")
-            # Нарезаем текст для озвучки (по 4000 знаков)
+            # ШАГ 3: Озвучка Мариной
+            st.subheader(f"🎙️ Слушаем сказку по главам:")
             chunks = [full_story[i:i+4000] for i in range(0, len(full_story), 4000)]
-            
             for idx, chunk in enumerate(chunks):
-                if len(chunks) > 1:
-                    st.write(f"**Глава {idx+1}**")
+                st.write(f"**Часть {idx+1}**")
                 generate_premium_audio(chunk)
             
             st.markdown(f'<div class="story-output">{full_story}</div>', unsafe_allow_html=True)
