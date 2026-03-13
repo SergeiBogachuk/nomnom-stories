@@ -50,15 +50,13 @@ else:
         
         # Список сказок с КОРЗИНКОЙ
         for s in stories.data:
-            # Делаем колонки: 5 частей под текст, 1 часть под корзину
-            c_left, c_right = st.columns([5, 1])
+            c_left, c_right = st.columns([6, 1]) # Текст шире, корзинка узкая
             with c_left:
                 if st.button(s.get('title') or "Сказка", key=f"btn_{s['id']}", use_container_width=True):
                     st.session_state.view_story = s
                     st.rerun()
             with c_right:
-                # Специальный отступ сверху, чтобы корзина была вровень с текстом
-                st.write(" ") 
+                # Просто иконка без лишнего мусора
                 if st.button("🗑️", key=f"del_{s['id']}"):
                     delete_story(s['id'])
                     st.rerun()
