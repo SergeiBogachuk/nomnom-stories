@@ -5,7 +5,7 @@ import requests
 # 1. Настройка страницы
 st.set_page_config(page_title="NomNom Stories", page_icon="🌙", layout="centered")
 
-# --- СТИЛЬ ПРИЛОЖЕНИЯ ---
+# --- СТИЛЬ ---
 st.markdown("""
     <style>
     .stApp { background: #0f172a; color: #f8fafc; }
@@ -17,36 +17,52 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-# 2. Подключение ключей из твоего скриншота
+# 2. Подключение ключей
 client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
 ELEVEN_KEY = st.secrets["ELEVENLABS_API_KEY"]
 
-# Функция для качественной озвучки
-def generate_audio(text):
-    # Это ID голоса Alice. Он очень приятный.
+# Функция для ПРЕМИУМ озвучки (ElevenLabs)
+def generate_premium_audio(text):
+    # ПРОВЕРЬ ЭТОТ ID! Это голос Alice. 
+    # Если ты выбрал другой в ElevenLabs, замени эти буквы на свои:
     VOICE_ID = "Xb7hHqWq9V7pE3E9Epxu" 
     
     url = f"https://api.elevenlabs.io/v1/text-to-speech/{VOICE_ID}"
-    headers = {"xi-api-key": ELEVEN_KEY, "Content-Type": "application/json"}
+    headers = {
+        "xi-api-key": ELEVEN_KEY,
+        "Content-Type": "application/json"
+    }
     data = {
         "text": text,
-        "model_id": "eleven_multilingual_v2",
-        "voice_settings": {"stability": 0.5, "similarity_boost": 0.75}
+        "model_id": "eleven_multilingual_v2", # Лучшая модель для русского языка
+        "voice_settings": {"stability": 0.5, "similarity_boost": 0.8}
     }
     response = requests.post(url, json=data, headers=headers)
-    return response.content if response.status_code == 200 else None
+    if response.status_code == 200:
+        return response.content
+    else:
+        st.error(f"Ошибка ElevenLabs: {response.text}")
+        return None
 
 # --- ИНТЕРФЕЙС ---
 if 'theme_idx' not in st.session_state: st.session_state.theme_idx = 0
 
 st.title("🌟 NomNom Stories")
-lang = st.selectbox("🌍 Язык / Language", ["Русский", "English"])
-name = st.text_input("Имя героя", value="Даша")
+st.write("### Терапевтические сказки с живым голосом")
+
+# Убираем старый выбор голосов, оставляем только настройки героя
+col1, col2 = st.columns(2)
+with col1:
+    name = st.text_input("Имя героя", value="Даша")
+with col2:
+    lang = st.selectbox("Язык", ["Русский", "English"])
+
 story_len = st.select_slider("⏳ Длительность", options=["3 мин", "10 мин", "20 мин"])
 
 st.divider()
 
 # Темы
+st.subheader("🎯 Какую тему выберем?")
 cols = st.columns(3)
 themes = ["🛡️ Храбрость", "🍎 Привычки", "🤝 Отношения"]
 for i in range(3):
@@ -56,30 +72,32 @@ for i in range(3):
             st.session_state.theme_idx = i
             st.rerun()
 
-details = st.text_area("✍️ Что сегодня обсудим в сказке? (Например: почему Даша боится пауков)")
+details = st.text_area("✍️ Опиши ситуацию (например: почему Даша не хочет спать?)")
 
 # --- ГЕНЕРАЦИЯ ---
 if st.button("✨ СОЗДАТЬ ЖИВУЮ СКАЗКУ ✨", type="primary", use_container_width=True):
-    with st.spinner("Работаем над психологией и живым голосом..."):
+    with st.spinner("Сочиняем историю и включаем живой голос..."):
         try:
             curr_theme = themes[st.session_state.theme_idx]
             
-            # 1. Текст с подытоживанием (как ты просил)
-            prompt = f"Напиши очень длинную и поучительную сказку для {name}. Тема: {curr_theme}. Ситуация: {details}. Язык: {lang}. В самом конце сказки ласково подытожь историю специально для {name}, объяснив простыми словами смысл того, что произошло, и как это поможет ей в жизни."
+            # 1. Текст (с твоим пожеланием про итог в конце)
+            prompt = f"Напиши очень подробную сказку для {name}. Тема: {curr_theme}. Ситуация: {details}. Язык: {lang}. В самом конце сказки ласково подытожь историю специально для {name}, объяснив смысл того, что произошло."
             
             res = client.chat.completions.create(model="gpt-4o", messages=[{"role": "user", "content": prompt}])
             story_text = res.choices[0].message.content
             
             # 2. Картинка
-            img_res = client.images.generate(model="dall-e-3", prompt=f"Pixar style illustration for kids: {curr_theme}, child {name}.")
+            img_res = client.images.generate(model="dall-e-3", prompt=f"Pixar illustration: {curr_theme}, child {name}.")
             
-            # 3. Живая озвучка через ElevenLabs
-            # Озвучиваем первые 4000 символов (самая суть)
-            audio = generate_audio(story_text[:4000])
+            # 3. ОЗВУЧКА ЧЕРЕЗ ELEVENLABS
+            # Мы берем первые 4000 знаков для теста
+            audio_content = generate_premium_audio(story_text[:4000])
 
             st.image(img_res.data[0].url, use_container_width=True)
-            if audio:
-                st.audio(audio, format="audio/mp3")
+            
+            if audio_content:
+                st.audio(audio_content, format="audio/mp3")
+            
             st.markdown(f'<div class="story-output">{story_text}</div>', unsafe_allow_html=True)
             st.balloons()
             
