@@ -25,19 +25,18 @@ def get_bg_music_html():
 
 # --- 2. ЛОГИКА ВХОДА ---
 if not st.session_state.get("logged_in", False):
-    # Убираем колонки совсем, CSS сам отцентрирует форму через margin: auto
-    st.write("") 
+    st.write("") # Отступы для центрирования
     st.write("")
     st.markdown("<h1 style='text-align: center;'>🌟 Вход в NomNom</h1>", unsafe_allow_html=True)
     with st.form("login_form"):
-        e = st.text_input("Email", placeholder="Ваш email")
-        p = st.text_input("Пароль", type="password", placeholder="Ваш пароль")
-        if st.form_submit_button("Войти", type="primary", use_container_width=True):
+        e = st.text_input("Email")
+        p = st.text_input("Пароль", type="password")
+        submit = st.form_submit_button("Войти", type="primary", use_container_width=True)
+        if submit:
             if check_user(e, p):
                 st.session_state.logged_in, st.session_state.user_email = True, e
                 st.rerun()
-            else:
-                st.error("Неверный логин или пароль")
+            else: st.error("Ошибка входа")
 else:
     # --- 3. ОСНОВНОЙ ИНТЕРФЕЙС ---
     if 'time_val' not in st.session_state: st.session_state.time_val = 5
