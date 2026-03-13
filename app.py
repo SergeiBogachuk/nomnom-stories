@@ -1,6 +1,7 @@
 import streamlit as st
 from openai import OpenAI
 import requests
+import streamlit.components.v1 as components
 
 st.set_page_config(page_title="NomNom Stories", page_icon="🌙", layout="centered")
 
@@ -23,7 +24,7 @@ st.markdown("""
 client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
 ELEVEN_KEY = st.secrets["ELEVENLABS_API_KEY"]
 
-def get_audio_bytes(text):
+def generate_premium_audio(text):
     VOICE_ID = "ymDCYd8puC7gYjxIamPt" # Марина
     url = f"https://api.elevenlabs.io/v1/text-to-speech/{VOICE_ID}"
     headers = {"xi-api-key": ELEVEN_KEY, "Content-Type": "application/json"}
@@ -32,13 +33,8 @@ def get_audio_bytes(text):
         "model_id": "eleven_multilingual_v2",
         "voice_settings": {"stability": 0.6, "similarity_boost": 0.8}
     }
-    try:
-        response = requests.post(url, json=data, headers=headers)
-        if response.status_code == 200:
-            return response.content
-        return None
-    except:
-        return None
+    res = requests.post(url, json=data, headers=headers)
+    return res.content if res.status_code == 200 else None
 
 # --- ИНТЕРФЕЙС ---
 if 'theme_idx' not in st.session_state: st.session_state.theme_idx = 0
@@ -65,7 +61,6 @@ details = st.text_area("✍️ Опиши ситуацию:")
 if st.button("✨ СОЗДАТЬ БОЛЬШУЮ СКАЗКУ ✨", type="primary", use_container_width=True):
     num_chapters = max(1, story_minutes // 3)
     progress_bar = st.progress(0)
-    status_text = st.empty()
     
     with st.spinner(f"Марина готовит сказку на {story_minutes} минут..."):
         try:
@@ -79,37 +74,47 @@ if st.button("✨ СОЗДАТЬ БОЛЬШУЮ СКАЗКУ ✨", type="primary
             plan = plan_res.choices[0].message.content
             
             full_story = ""
-            combined_audio = b"" # ТУТ СОБИРАЕМ ВЕСЬ ЗВУК
             
-            # 2. Поочередная генерация
+            # Картинка
+            img_res = client.images.generate(model="dall-e-3", prompt=f"Cozy bedtime story: {curr_theme}, child {name}.")
+            st.image(img_res.data[0].url, use_container_width=True)
+
+            st.subheader("🎙️ Главы сказки (играют одна за другой):")
+            
+            # 2. Поочередная генерация глав и вывод аудио
             for i in range(num_chapters):
-                status_text.text(f"🖋️ Пишем и озвучиваем главу {i+1} из {num_chapters}...")
-                
                 ch_res = client.chat.completions.create(
                     model="gpt-4o", 
-                    messages=[{"role": "user", "content": f"Напиши главу №{i+1} сказки по плану: {plan}. Пиши МАКСИМАЛЬНО МНОГО текста. Если последняя - ласковый вывод. Прошлое: {full_story[-500:]}"}]
+                    messages=[{"role": "user", "content": f"Напиши главу №{i+1} для {name} по плану: {plan}. Пиши МАКСИМАЛЬНО МНОГО текста. Прошлое: {full_story[-500:]}"}]
                 )
                 chapter_text = ch_res.choices[0].message.content
                 full_story += f"\n\n### Глава {i+1}\n" + chapter_text
                 
-                # Добавляем аудио кусочек в общий файл
-                audio_part = get_audio_bytes(chapter_text)
-                if audio_part:
-                    combined_audio += audio_part
+                audio_bytes = generate_premium_audio(chapter_text)
+                if audio_bytes:
+                    # Выводим плеер с уникальным ID для каждой главы
+                    st.write(f"**Глава {i+1}**")
+                    st.audio(audio_bytes, format="audio/mp3")
                 
                 progress_bar.progress((i + 1) / num_chapters)
 
-            status_text.text("✅ Всё готово! Приятного прослушивания.")
+            # --- МАГИЯ АВТО-ПЕРЕКЛЮЧЕНИЯ (JavaScript) ---
+            # Этот скрипт находит все аудио-плееры на странице и заставляет их играть по очереди
+            components.html("""
+                <script>
+                const playNext = () => {
+                    const audios = window.parent.document.querySelectorAll('audio');
+                    for (let i = 0; i < audios.length - 1; i++) {
+                        audios[i].onended = () => {
+                            audios[i+1].play();
+                        };
+                    }
+                };
+                // Запускаем проверку каждые 2 секунды, пока плееры подгружаются
+                setInterval(playNext, 2000);
+                </script>
+            """, height=0)
 
-            # Картинка
-            img_res = client.images.generate(model="dall-e-3", prompt=f"Bedtime story: {curr_theme}, child {name}, cozy.")
-            st.image(img_res.data[0].url, use_container_width=True)
-
-            # ОДИН ПЛЕЕР ДЛЯ ВСЕГО
-            if combined_audio:
-                st.subheader("🎙️ Слушать сказку целиком:")
-                st.audio(combined_audio, format="audio/mp3")
-            
             st.markdown(f'<div class="story-output">{full_story}</div>', unsafe_allow_html=True)
             st.balloons()
             
