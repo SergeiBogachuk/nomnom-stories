@@ -7,54 +7,51 @@ import streamlit_authenticator as stauth
 
 st.set_page_config(page_title="NomNom Stories", page_icon="🌙", layout="wide")
 
-# --- 1. СИСТЕМА ВХОДА (ОБНОВЛЕННАЯ ВЕРСИЯ) ---
-# Настройка пользователей
-config = {
-    'credentials': {
-        'usernames': {
-            'sergey': {
-                'name': 'Сергей',
-                'password': 'admin123' # В реальном бизнесе здесь будет хеш
-            },
-            'user123': {
-                'name': 'Тестовый Пользователь',
-                'password': 'guest123'
-            }
+# --- СИСТЕМА ВХОДА ---
+credentials = {
+    'usernames': {
+        'sergey': {
+            'name': 'Сергей',
+            'password': 'admin123'
+        },
+        'user123': {
+            'name': 'Тестовый Пользователь',
+            'password': 'guest123'
         }
-    },
-    'cookie': {
-        'expiry_days': 30,
-        'key': 'nomnom_cookie',
-        'name': 'nomnom_auth'
-    },
-    'preauthorized': {'emails': []}
+    }
 }
 
-# Создаем объект аутентификатора
+# Инициализация аутентификатора
 authenticator = stauth.Authenticate(
-    config['credentials'],
-    config['cookie']['name'],
-    config['cookie']['key'],
-    config['cookie']['expiry_days']
+    credentials,
+    'nomnom_cookie',
+    'auth_key',
+    cookie_expiry_days=30
 )
 
-# Исправленный вызов логина
-# Теперь мы передаем заголовок и положение через именованный аргумент
-name, authentication_status, username = authenticator.login(location='main')
+# Пробуем войти
+# В новых версиях аргумент называется 'location', в старых его не было. 
+# Делаем универсально:
+try:
+    name, authentication_status, username = authenticator.login()
+except:
+    name, authentication_status, username = authenticator.login(location='main')
 
 if authentication_status == False:
     st.error('Неверное имя пользователя или пароль')
 elif authentication_status == None:
-    st.info('Добро пожаловать в NomNom Stories! Пожалуйста, войдите в свой аккаунт.')
+    st.info('Пожалуйста, войдите в систему')
 elif authentication_status:
-    # --- ОСНОВНОЙ КОД ПРИЛОЖЕНИЯ ---
+    # --- ТУТ НАЧИНАЕТСЯ ТВОЕ ПРИЛОЖЕНИЕ ---
     with st.sidebar:
-        st.success(f"Вы вошли как: **{name}**")
+        st.success(f"Привет, {name}!")
         authenticator.logout('Выйти', 'sidebar')
-        st.divider()
-        st.header("Настройки")
-        
-    # Функция для музыки (оставляем без изменений, она работает супер)
+    
+    # Твой остальной код (OpenAI, Музыка и т.д.)
+    client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
+    ELEVEN_KEY = st.secrets["ELEVENLABS_API_KEY"]
+    
+    # Функция музыки
     def get_audio_html(file_path):
         try:
             with open(file_path, "rb") as f:
@@ -67,12 +64,10 @@ elif authentication_status:
         <style>
         .stApp { background: #0a0f1e; color: #f8fafc; }
         [data-testid="stSidebar"] { background-color: #111827 !important; border-right: 2px solid #38bdf8; }
-        .story-output { background: #ffffff; color: #1e293b; padding: 40px; border-radius: 30px; font-size: 1.2em; line-height: 1.7; box-shadow: 0 10px 40px rgba(0,0,0,0.6); }
+        .story-output { background: #ffffff; color: #1e293b; padding: 40px; border-radius: 30px; font-size: 1.2em; line-height: 1.7; }
         </style>
         """, unsafe_allow_html=True)
 
-    client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
-    ELEVEN_KEY = st.secrets["ELEVENLABS_API_KEY"]
     VOICES = {"Марина (Женский)": "ymDCYd8puC7gYjxIamPt", "Николай (Мужской)": "8JVbfL6oEdmuxKn5DK2C"}
 
     def generate_premium_audio(text, voice_id):
@@ -82,7 +77,7 @@ elif authentication_status:
         res = requests.post(url, json=data, headers=headers)
         return res.content if res.status_code == 200 else None
 
-    # ИНТЕРФЕЙС ПРИЛОЖЕНИЯ
+    # ИНТЕРФЕЙС
     with st.sidebar:
         selected_voice = st.selectbox("Голос", list(VOICES.keys()))
         music_vol = st.slider("Громкость музыки", 0.0, 1.0, 0.2)
@@ -94,13 +89,13 @@ elif authentication_status:
     with col2: lang = st.selectbox("Язык", ["Русский", "English"])
 
     story_minutes = st.select_slider("⏳ Длительность", options=[3, 5, 10, 15, 20, 30], value=10)
-    details = st.text_area("✍️ О чем расскажем сегодня?")
+    details = st.text_area("✍️ О чем сегодня сказка?")
 
-    if st.button("✨ СОЗДАТЬ МАГИЧЕСКУЮ СКАЗКУ ✨", type="primary", use_container_width=True):
+    if st.button("✨ СОЗДАТЬ СКАЗКУ ✨", type="primary", use_container_width=True):
         num_chapters = max(1, story_minutes // 3)
-        with st.spinner("Создаем волшебство..."):
+        with st.spinner("Магия создается..."):
             try:
-                img_res = client.images.generate(model="dall-e-3", prompt=f"Cozy Pixar bedtime illustration, child {child_name}, thematic: {details}.")
+                img_res = client.images.generate(model="dall-e-3", prompt=f"Cozy Pixar illustration, child {child_name}.")
                 st.image(img_res.data[0].url, use_container_width=True)
 
                 music_html = get_audio_html("bg_music.mp3")
@@ -111,7 +106,7 @@ elif authentication_status:
                     st.write(f"📖 Глава {i+1}...")
                     ch_res = client.chat.completions.create(
                         model="gpt-4o",
-                        messages=[{"role": "user", "content": f"Напиши главу {i+1} сказки для {child_name}. Тема: {details}. Язык: {lang}."}]
+                        messages=[{"role": "user", "content": f"Напиши главу {i+1} сказки для {child_name}."}]
                     )
                     chapter_text = ch_res.choices[0].message.content
                     full_story += f"\n\n### Глава {i+1}\n" + chapter_text
