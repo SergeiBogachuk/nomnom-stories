@@ -1,7 +1,7 @@
 import streamlit as st
 import base64
 from styles import apply_styles
-from database import check_user, get_user_stories, save_story, update_audio
+from database import check_user, get_user_stories, save_story, update_audio, delete_story
 from ai_engine import generate_story_text, generate_image, get_speech_b64
 
 st.set_page_config(page_title="NomNom Stories", layout="wide", initial_sidebar_state="expanded")
@@ -10,7 +10,7 @@ apply_styles()
 if not st.session_state.get("logged_in", False):
     _, center, _ = st.columns([1, 1.5, 1])
     with center:
-        st.markdown("<h1 style='text-align: center;'>🌟 NomNom Stories</h1>", unsafe_allow_html=True)
+        st.markdown("<h1 style='text-align: center; color: white;'>🌟 NomNom Stories</h1>", unsafe_allow_html=True)
         with st.form("login_form"):
             e = st.text_input("Email")
             p = st.text_input("Пароль", type="password")
@@ -22,50 +22,46 @@ else:
     if 'time_val' not in st.session_state: st.session_state.time_val = 5
     if 'view_story' not in st.session_state: st.session_state.view_story = None
 
-    # --- САЙДБАР (ИСПРАВЛЕННЫЙ) ---
     with st.sidebar:
         st.markdown(f"### 👤 {st.session_state.user_email}")
-        st.divider()
         
-        # Заменяем expander на обычный список, если он не открывался
-        st.markdown("### 📚 Мои сказки")
-        stories = get_user_stories(st.session_state.user_email)
-        for s in stories.data:
-            if st.button(s.get('title') or "Сказка", key=f"btn_{s['id']}", use_container_width=True):
-                st.session_state.view_story = s
-                st.rerun()
+        # СВОРАЧИВАЕМЫЙ СПИСОК СКАЗОК
+        with st.expander("📚 Мои сказки", expanded=False):
+            stories = get_user_stories(st.session_state.user_email)
+            for s in stories.data:
+                col_title, col_del = st.columns([4, 1])
+                with col_title:
+                    if st.button(s.get('title') or "Сказка", key=f"btn_{s['id']}", use_container_width=True):
+                        st.session_state.view_story = s
+                        st.rerun()
+                with col_del:
+                    if st.button("🗑️", key=f"del_{s['id']}", help="Удалить"):
+                        delete_story(s['id'])
+                        st.rerun()
         
         st.divider()
-        # Кнопки в самом низу
-        if st.button("➕ Новая сказка", type="primary", key="new_story_btn", use_container_width=True):
+        if st.button("➕ Новая сказка", type="primary", use_container_width=True):
             st.session_state.view_story = None
             st.rerun()
             
-        if st.button("🚪 Выйти", key="logout_btn", use_container_width=True):
+        if st.button("🚪 Выйти", use_container_width=True):
             st.session_state.logged_in = False
-            st.session_state.user_email = None
             st.rerun()
 
-    # --- ГЛАВНЫЙ ЭКРАН ---
+    # ГЛАВНЫЙ ЭКРАН
     if st.session_state.view_story:
         s = st.session_state.view_story
-        st.markdown(f"<h1 style='text-align: center;'>📖 {s.get('title')}</h1>", unsafe_allow_html=True)
-        
-        if s.get('audio_base64'):
-            st.audio(base64.b64decode(s['audio_base64']))
-        
-        col_img, col_txt = st.columns([1, 1])
-        with col_img:
-            if s.get('image_url'): st.image(s['image_url'], use_container_width=True)
-        with col_txt:
-            st.markdown(f'<div style="background:white; color:#1e293b; padding:25px; border-radius:15px; font-size:1.1rem; height: 500px; overflow-y: scroll;">{s["story_text"]}</div>', unsafe_allow_html=True)
+        st.markdown(f"<h1 style='text-align: center; color: white;'>📖 {s.get('title')}</h1>", unsafe_allow_html=True)
+        if s.get('audio_base64'): st.audio(base64.b64decode(s['audio_base64']))
+        if s.get('image_url'): st.image(s['image_url'], use_container_width=True)
+        st.markdown(f'<div style="background:white; color:#1e293b; padding:25px; border-radius:15px; font-size:1.1rem;">{s["story_text"]}</div>', unsafe_allow_html=True)
     else:
-        st.markdown("<h1 style='text-align: center;'>✨ Создать магию</h1>", unsafe_allow_html=True)
+        st.markdown("<h1 style='text-align: center; color: white;'>✨ Создать магию</h1>", unsafe_allow_html=True)
         cn = st.text_input("Имя ребенка", value="Даша")
-        skills = st.multiselect("Тема воспитания:", ["Честность", "Доброта", "Смелость", "Трудолюбие"], default=["Честность"])
+        skills = st.multiselect("Тема воспитания:", ["Честность", "Доброта", "Смелость"], default=["Честность"])
         
         c1, c2 = st.columns(2)
-        use_img = c1.checkbox("🎨 Текст + Картинка", value=True)
+        use_img = c1.checkbox("🎨 С картинкой", value=True)
         use_audio = c2.checkbox("🎧 Только Аудио", value=False)
 
         st.markdown("### ⏳ Длительность:")
@@ -75,13 +71,11 @@ else:
                 st.session_state.time_val = t
                 st.rerun()
 
-        details = st.text_area("✍️ О чем будет история?")
+        details = st.text_area("О чем сказка?")
         if st.button("🚀 СОЗДАТЬ МАГИЮ", type="primary", use_container_width=True):
-            with st.spinner("🧙‍♂️ Колдуем..."):
-                try:
-                    txt = generate_story_text(cn, "Русский", skills, details, st.session_state.time_val)
-                    ttl = txt.split('\n')[0].strip()
-                    url = generate_image(ttl) if use_img else None
-                    save_story({"user_email": st.session_state.user_email, "child_name": cn, "title": ttl, "story_text": txt, "image_url": url})
-                    st.rerun()
-                except Exception as e: st.error(f"Ошибка: {e}")
+            with st.spinner("Колдуем..."):
+                txt = generate_story_text(cn, "Русский", skills, details, st.session_state.time_val)
+                ttl = txt.split('\n')[0].strip()
+                url = generate_image(ttl) if use_img else None
+                save_story({"user_email": st.session_state.user_email, "child_name": cn, "title": ttl, "story_text": txt, "image_url": url})
+                st.rerun()
