@@ -2,11 +2,18 @@ import streamlit as st
 import base64
 import streamlit.components.v1 as components
 
+# Импортируем наши модули
 from styles import apply_styles
 from database import check_user, get_user_stories, save_story, update_audio
 from ai_engine import generate_story_text, generate_image, get_speech_b64
 
-st.set_page_config(page_title="NomNom Stories", page_icon="🌙", layout="wide")
+# --- 1. CONFIG (Добавили авто-раскрытие панели) ---
+st.set_page_config(
+    page_title="NomNom Stories", 
+    page_icon="🌙", 
+    layout="wide",
+    initial_sidebar_state="expanded"
+)
 apply_styles()
 
 def get_bg_music_html():
@@ -16,7 +23,7 @@ def get_bg_music_html():
             return f'<audio autoplay loop id="bg_music"><source src="data:audio/mp3;base64,{data}" type="audio/mp3"></audio><script>document.getElementById("bg_music").volume = 0.1;</script>'
     except: return ""
 
-# --- ПЕРЕВОДЫ ---
+# --- 2. TRANSLATIONS ---
 lang_dict = {
     "Русский": {
         "title": "✨ NomNom Stories (GPT-5.3 PRO)",
@@ -38,26 +45,19 @@ lang_dict = {
     }
 }
 
-# --- ЛОГИКА ---
+# --- 3. LOGIC ---
 if not st.session_state.get("logged_in", False):
     st.title("🌟 NomNom Stories")
-    
-    # ФОРМА ДЛЯ ВХОДА ПО ENTER
     with st.form("login_form"):
         e = st.text_input("Email")
         p = st.text_input("Пароль", type="password")
         submit = st.form_submit_button("Войти", type="primary", use_container_width=True)
-        
         if submit:
-            res = check_user(e, p)
-            if res:
+            if check_user(e, p):
                 st.session_state.logged_in, st.session_state.user_email = True, e
                 st.rerun()
-            else:
-                st.error("Неверный логин или пароль")
-
+            else: st.error("Ошибка входа")
 else:
-    # (Остальной код остается таким же, как был ранее)
     if 'time_val' not in st.session_state: st.session_state.time_val = 5
     if 'view_story' not in st.session_state: st.session_state.view_story = None
     if 'sel_lang' not in st.session_state: st.session_state.sel_lang = "Русский"
@@ -103,12 +103,9 @@ else:
     else:
         st.title(T['title'])
         cn = st.text_input(T['child_name'], value="Даша")
-        current_lang = st.selectbox("Language / Язык", ["Русский", "English"], index=0 if st.session_state.sel_lang == "Русский" else 1)
-        if current_lang != st.session_state.sel_lang:
-            st.session_state.sel_lang = current_lang
-            st.rerun()
-
-        skills = st.multiselect(T['skills_label'], T.get('skills', ["Доброта"]), default=[T.get('skills', ["Доброта"])[0]])
+        st.session_state.sel_lang = st.selectbox("Language / Язык", ["Русский", "English"], index=0 if st.session_state.sel_lang == "Русский" else 1)
+        
+        skills = st.multiselect(T['skills_label'], T.get('skills', ["Честность"]), default=["Честность"])
         
         c1, c2 = st.columns(2)
         with c1: use_img = st.checkbox(T['opt_img'], value=True)
