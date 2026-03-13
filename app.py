@@ -5,27 +5,18 @@ import streamlit.components.v1 as components
 
 st.set_page_config(page_title="NomNom Stories", page_icon="🌙", layout="wide")
 
-# --- СТИЛЬ ПЛЕЕРА И ИНТЕРФЕЙСА ---
+# --- СТИЛЬ ---
 st.markdown("""
     <style>
     .stApp { background: #0a0f1e; color: #f8fafc; }
     [data-testid="stSidebar"] { background-color: #111827 !important; border-right: 2px solid #38bdf8; }
-    
-    div.stButton > button {
-        height: 65px !important; font-size: 18px !important; border-radius: 12px !important;
-        background-color: #1e293b !important; color: white !important; border: 1px solid #334155 !important;
-    }
-    
-    div.stButton > button[kind="primary"] {
-        background: linear-gradient(135deg, #38bdf8 0%, #818cf8 100%) !important;
-        border: none !important; box-shadow: 0 4px 20px rgba(56, 189, 248, 0.4) !important;
-    }
-
+    div.stButton > button { height: 60px !important; border-radius: 12px !important; }
+    /* Прячем плеер фоновой музыки, чтобы не путать пользователя */
+    .hidden-audio { display: none; }
     .story-output { background: #ffffff; color: #1e293b; padding: 40px; border-radius: 30px; font-size: 1.25em; line-height: 1.7; box-shadow: 0 10px 40px rgba(0,0,0,0.6); }
     </style>
     """, unsafe_allow_html=True)
 
-# Инициализация OpenAI
 client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
 ELEVEN_KEY = st.secrets["ELEVENLABS_API_KEY"]
 
@@ -34,12 +25,8 @@ VOICES = {
     "Николай (Мужской)": "8JVbfL6oEdmuxKn5DK2C"
 }
 
-# НОВЫЕ КАЧЕСТВЕННЫЕ ТРЕКИ
-MUSIC_URLS = {
-    "🎹 Колыбельное пианино (Премиум)": "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-8.mp3",
-    "✨ Звездная ночь (Оркестр)": "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-15.mp3",
-    "🍃 Шепот леса (Спокойная)": "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3"
-}
+# ОДНА КЛАССИЧЕСКАЯ МЕЛОДИЯ (Спокойное пианино)
+CLASSIC_MUSIC = "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-8.mp3"
 
 def generate_premium_audio(text, voice_id):
     url = f"https://api.elevenlabs.io/v1/text-to-speech/{voice_id}"
@@ -56,8 +43,7 @@ if 'theme_idx' not in st.session_state: st.session_state.theme_idx = 0
 with st.sidebar:
     st.header("Настройки")
     selected_voice = st.selectbox("Голос", list(VOICES.keys()))
-    bg_music = st.selectbox("Музыка", list(MUSIC_URLS.keys()))
-    music_vol = st.slider("Громкость музыки", 0.0, 1.0, 0.3)
+    music_vol = st.slider("Громкость музыки", 0.0, 1.0, 0.2)
 
 st.title("🌟 NomNom Stories")
 
@@ -81,48 +67,48 @@ details = st.text_area("✍️ О чем сказка сегодня?")
 
 if st.button("✨ СОЗДАТЬ И ВКЛЮЧИТЬ СКАЗКУ ✨", type="primary", use_container_width=True):
     num_chapters = max(1, story_minutes // 3)
-    with st.spinner("Магия начинается..."):
+    with st.spinner("Магия классики и слов..."):
         try:
             curr_theme = themes[st.session_state.theme_idx]
-            
-            # Картинка
-            img_res = client.images.generate(model="dall-e-3", prompt=f"Cozy Pixar illustration: {curr_theme}, child {name}, magical night.")
+            img_res = client.images.generate(model="dall-e-3", prompt=f"Cozy Pixar bedtime illustration: {curr_theme}, child {name}.")
             st.image(img_res.data[0].url, use_container_width=True)
 
-            # Плеер фоновой музыки (ставим первым)
-            st.audio(MUSIC_URLS[bg_music], format="audio/mp3", loop=True)
+            # --- СКРЫТЫЙ ПЛЕЕР МУЗЫКИ ---
+            st.markdown(f'<audio id="bg_music" src="{CLASSIC_MUSIC}" loop></audio>', unsafe_allow_html=True)
             
             full_story = ""
             for i in range(num_chapters):
                 st.write(f"📖 Глава {i+1}...")
                 ch_res = client.chat.completions.create(
                     model="gpt-4o",
-                    messages=[{"role": "user", "content": f"Напиши главу {i+1} сказки для {name} на тему {curr_theme}. Ситуация: {details}. Прошлое: {full_story[-500:]}"}]
+                    messages=[{"role": "user", "content": f"Напиши главу {i+1} сказки для {name} на тему {curr_theme}. Прошлое: {full_story[-500:]}"}]
                 )
                 chapter_text = ch_res.choices[0].message.content
                 full_story += f"\n\n### Глава {i+1}\n" + chapter_text
                 
                 audio_bytes = generate_premium_audio(chapter_text, VOICES[selected_voice])
                 if audio_bytes:
-                    # Плееры глав
                     st.audio(audio_bytes, format="audio/mp3")
 
-            # СКРИПТ АВТОМАТИЧЕСКОГО ВКЛЮЧЕНИЯ ВСЕГО СРАЗУ
+            # --- JS: ЗАПУСКАЕМ МУЗЫКУ И ПЕРВУЮ ГЛАВУ ОДНОВРЕМЕННО ---
             components.html(f"""
                 <script>
                 setTimeout(() => {{
-                    const audios = window.parent.document.querySelectorAll('audio');
-                    if (audios.length > 0) {{
-                        // Включаем музыку
-                        audios[0].volume = {music_vol};
-                        audios[0].play().catch(e => console.log("Music blocked by browser"));
-                        
-                        // Включаем первую главу
-                        if (audios[1]) audios[1].play();
+                    const music = window.parent.document.getElementById('bg_music');
+                    const chapters = window.parent.document.querySelectorAll('audio');
+                    
+                    if (music) {{
+                        music.volume = {music_vol};
+                        music.play();
+                    }}
+                    
+                    // Первый аудио-плеер (не считая скрытого) - это Глава 1
+                    if (chapters[1]) {{
+                        chapters[1].play();
                         
                         // Автопереход между главами
-                        for (let i = 1; i < audios.length - 1; i++) {{
-                            audios[i].onended = () => {{ audios[i+1].play(); }};
+                        for (let i = 1; i < chapters.length - 1; i++) {{
+                            chapters[i].onended = () => {{ chapters[i+1].play(); }};
                         }}
                     }}
                 }}, 1000);
