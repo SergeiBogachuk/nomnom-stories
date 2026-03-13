@@ -1,5 +1,4 @@
 streamlit
 openai
 requests
-streamlit-authenticator
 supabase
