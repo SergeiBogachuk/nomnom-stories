@@ -5,7 +5,7 @@ import streamlit.components.v1 as components
 
 st.set_page_config(page_title="NomNom Stories", page_icon="🌙", layout="wide")
 
-# --- ВОЗВРАЩАЕМ КРАСИВЫЙ СТИЛЬ И КНОПКИ ---
+# --- СТИЛЬ ПЛЕЕРА И ИНТЕРФЕЙСА ---
 st.markdown("""
     <style>
     .stApp { background: #0a0f1e; color: #f8fafc; }
@@ -25,7 +25,7 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-# Ключи
+# Инициализация OpenAI
 client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
 ELEVEN_KEY = st.secrets["ELEVENLABS_API_KEY"]
 
@@ -34,11 +34,11 @@ VOICES = {
     "Николай (Мужской)": "8JVbfL6oEdmuxKn5DK2C"
 }
 
-# Используем самые надежные ссылки на музыку
+# НОВЫЕ КАЧЕСТВЕННЫЕ ТРЕКИ
 MUSIC_URLS = {
-    "🌙 Волшебная колыбельная": "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3",
-    "🌲 Глубокий лес": "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3",
-    "🌧️ Уютный дождь": "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-10.mp3"
+    "🎹 Колыбельное пианино (Премиум)": "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-8.mp3",
+    "✨ Звездная ночь (Оркестр)": "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-15.mp3",
+    "🍃 Шепот леса (Спокойная)": "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3"
 }
 
 def generate_premium_audio(text, voice_id):
@@ -54,11 +54,10 @@ def generate_premium_audio(text, voice_id):
 if 'theme_idx' not in st.session_state: st.session_state.theme_idx = 0
 
 with st.sidebar:
-    st.image("https://cdn-icons-png.flaticon.com/512/3094/3094406.png", width=80)
     st.header("Настройки")
     selected_voice = st.selectbox("Голос", list(VOICES.keys()))
     bg_music = st.selectbox("Музыка", list(MUSIC_URLS.keys()))
-    music_vol = st.slider("Громкость музыки", 0.1, 1.0, 0.4)
+    music_vol = st.slider("Громкость музыки", 0.0, 1.0, 0.3)
 
 st.title("🌟 NomNom Stories")
 
@@ -68,7 +67,6 @@ with col2: lang = st.selectbox("Язык", ["Русский", "English"])
 
 story_minutes = st.select_slider("⏳ Длительность", options=[3, 5, 10, 15, 20, 30, 45, 60], value=10)
 
-# ВОЗВРАЩАЕМ КНОПКИ НАВЫКОВ
 st.divider()
 themes = ["🛡️ Храбрость", "🍎 Привычки", "🤝 Отношения"]
 cols = st.columns(3)
@@ -79,19 +77,19 @@ for i in range(3):
             st.session_state.theme_idx = i
             st.rerun()
 
-details = st.text_area("✍️ Добавь деталей:")
+details = st.text_area("✍️ О чем сказка сегодня?")
 
-if st.button("✨ СОЗДАТЬ МАГИЮ ✨", type="primary", use_container_width=True):
+if st.button("✨ СОЗДАТЬ И ВКЛЮЧИТЬ СКАЗКУ ✨", type="primary", use_container_width=True):
     num_chapters = max(1, story_minutes // 3)
-    with st.spinner("Создаем сказку..."):
+    with st.spinner("Магия начинается..."):
         try:
             curr_theme = themes[st.session_state.theme_idx]
             
             # Картинка
-            img_res = client.images.generate(model="dall-e-3", prompt=f"Cozy Pixar illustration: {curr_theme}, child {name}.")
+            img_res = client.images.generate(model="dall-e-3", prompt=f"Cozy Pixar illustration: {curr_theme}, child {name}, magical night.")
             st.image(img_res.data[0].url, use_container_width=True)
 
-            # Музыка
+            # Плеер фоновой музыки (ставим первым)
             st.audio(MUSIC_URLS[bg_music], format="audio/mp3", loop=True)
             
             full_story = ""
@@ -99,31 +97,40 @@ if st.button("✨ СОЗДАТЬ МАГИЮ ✨", type="primary", use_container_
                 st.write(f"📖 Глава {i+1}...")
                 ch_res = client.chat.completions.create(
                     model="gpt-4o",
-                    messages=[{"role": "user", "content": f"Напиши главу {i+1} сказки для {name} на тему {curr_theme}. Прошлое: {full_story[-500:]}"}]
+                    messages=[{"role": "user", "content": f"Напиши главу {i+1} сказки для {name} на тему {curr_theme}. Ситуация: {details}. Прошлое: {full_story[-500:]}"}]
                 )
                 chapter_text = ch_res.choices[0].message.content
                 full_story += f"\n\n### Глава {i+1}\n" + chapter_text
                 
                 audio_bytes = generate_premium_audio(chapter_text, VOICES[selected_voice])
                 if audio_bytes:
+                    # Плееры глав
                     st.audio(audio_bytes, format="audio/mp3")
 
-            # Автозапуск
+            # СКРИПТ АВТОМАТИЧЕСКОГО ВКЛЮЧЕНИЯ ВСЕГО СРАЗУ
             components.html(f"""
                 <script>
-                const audios = window.parent.document.querySelectorAll('audio');
-                if (audios.length > 0) {{
-                    audios[0].volume = {music_vol};
-                    audios[0].play();
-                    if (audios[1]) audios[1].play();
-                    for (let i = 1; i < audios.length - 1; i++) {{
-                        audios[i].onended = () => {{ audios[i+1].play(); }};
+                setTimeout(() => {{
+                    const audios = window.parent.document.querySelectorAll('audio');
+                    if (audios.length > 0) {{
+                        // Включаем музыку
+                        audios[0].volume = {music_vol};
+                        audios[0].play().catch(e => console.log("Music blocked by browser"));
+                        
+                        // Включаем первую главу
+                        if (audios[1]) audios[1].play();
+                        
+                        // Автопереход между главами
+                        for (let i = 1; i < audios.length - 1; i++) {{
+                            audios[i].onended = () => {{ audios[i+1].play(); }};
+                        }}
                     }}
-                }}
+                }}, 1000);
                 </script>
             """, height=0)
 
             st.markdown(f'<div class="story-output">{full_story}</div>', unsafe_allow_html=True)
+            st.balloons()
             
         except Exception as e:
             st.error(f"Ошибка: {e}")
