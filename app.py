@@ -4,7 +4,7 @@ from styles import apply_styles
 from database import check_user, get_user_stories, save_story, update_audio, delete_story
 from ai_engine import generate_story_text, generate_image, get_speech_b64
 
-st.set_page_config(page_title="NomNom Stories", layout="wide", initial_sidebar_state="expanded")
+st.set_page_config(page_title="NomNom Stories", layout="wide")
 apply_styles()
 
 if not st.session_state.get("logged_in", False):
@@ -25,19 +25,20 @@ else:
     with st.sidebar:
         st.markdown(f"👤 {st.session_state.user_email}")
         st.divider()
-        st.subheader("📚 Мои сказки")
         
-        stories = get_user_stories(st.session_state.user_email)
-        for s in stories.data:
-            col_btn, col_del = st.columns([5, 1])
-            with col_btn:
-                if st.button(s.get('title') or "Сказка", key=f"s_{s['id']}", use_container_width=True):
-                    st.session_state.view_story = s
-                    st.rerun()
-            with col_del:
-                if st.button("🗑️", key=f"d_{s['id']}"):
-                    delete_story(s['id'])
-                    st.rerun()
+        # Сворачиваемый список
+        with st.expander("📚 Мои сказки", expanded=True):
+            stories = get_user_stories(st.session_state.user_email)
+            for s in stories.data:
+                c_btn, c_del = st.columns([5, 1])
+                with c_btn:
+                    if st.button(s.get('title') or "Сказка", key=f"s_{s['id']}", use_container_width=True):
+                        st.session_state.view_story = s
+                        st.rerun()
+                with c_del:
+                    if st.button("🗑️", key=f"d_{s['id']}"):
+                        delete_story(s['id'])
+                        st.rerun()
         
         st.divider()
         if st.button("➕ Новая сказка", type="primary", use_container_width=True):
@@ -57,8 +58,8 @@ else:
         st.title("✨ Создать сказку")
         cn = st.text_input("Имя ребенка", value="Даша")
         
-        # ВОТ ОНИ - ТВОИ ТЕМЫ!
-        all_skills = ["Честность", "Доброта", "Смелость", "Дружба", "Гигиена", "Трудолюбие", "Вежливость", "Усидчивость"]
+        # Темы теперь будут сворачиваться нормально
+        all_skills = ["Честность", "Доброта", "Смелость", "Дружба", "Гигиена", "Трудолюбие"]
         skills = st.multiselect("🎯 Чему научим сегодня?", all_skills, default=["Честность"])
         
         c1, c2 = st.columns(2)
@@ -68,8 +69,8 @@ else:
         st.write("⏳ Длительность:")
         t_cols = st.columns(3)
         for i, t in enumerate([3, 5, 10]):
-            btn_type = "primary" if st.session_state.time_val == t else "secondary"
-            if t_cols[i].button(f"{t} min", key=f"t_{t}", type=btn_type, use_container_width=True):
+            btn_t = "primary" if st.session_state.time_val == t else "secondary"
+            if t_cols[i].button(f"{t} min", key=f"t_{t}", type=btn_t, use_container_width=True):
                 st.session_state.time_val = t
                 st.rerun()
 
