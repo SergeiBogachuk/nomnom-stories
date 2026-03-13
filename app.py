@@ -4,131 +4,126 @@ from openai import OpenAI
 # 1. Настройка страницы
 st.set_page_config(page_title="NomNom Stories", page_icon="🌙", layout="centered")
 
-# Словарь для перевода
-translations = {
-    "Русский": {
-        "title": "🌟 NomNom Stories",
-        "subtitle": "Превращаем капризы в сказочные уроки",
-        "settings": "👶 Настройки героя",
-        "name": "Имя героя",
-        "age": "Возраст",
-        "lang_label": "Язык",
-        "theme_header": "🎯 Какую тему выберем?",
-        "selected": "Сейчас выбрано",
-        "themes": ["🛡️ Храбрость", "🍎 Привычки", "🤝 Отношения"],
-        "details_label": "✍️ Добавь подробности:",
-        "details_ph": "Например: Даша не хочет идти в садик...",
-        "button": "✨ СОЗДАТЬ ВОЛШЕБНУЮ ИСТОРИЮ ✨",
-        "processing": "Магия в процессе...",
-    },
-    "English": {
-        "title": "🌟 NomNom Stories",
-        "subtitle": "Turning tantrums into fairy tale lessons",
-        "settings": "👶 Hero Settings",
-        "name": "Hero Name",
-        "age": "Age",
-        "lang_label": "Language",
-        "theme_header": "🎯 Which theme?",
-        "selected": "Selected",
-        "themes": ["🛡️ Bravery", "🍎 Habits", "🤝 Relationships"],
-        "details_label": "✍️ Add details:",
-        "details_ph": "Example: Dasha doesn't want to go to daycare...",
-        "button": "✨ CREATE MAGICAL STORY ✨",
-        "processing": "Magic in progress...",
-    },
-    "Română": {
-        "title": "🌟 NomNom Stories",
-        "subtitle": "Transformăm capriciile în lecții de basm",
-        "settings": "👶 Setări Erou",
-        "name": "Numele eroului",
-        "age": "Vârsta",
-        "lang_label": "Limba",
-        "theme_header": "🎯 Ce temă alegem?",
-        "selected": "Selectat",
-        "themes": ["🛡️ Curaj", "🍎 Obiceiuri", "🤝 Relații"],
-        "details_label": "✍️ Adaugă detalii:",
-        "details_ph": "Exemplu: Dasha nu vrea să meargă la grădiniță...",
-        "button": "✨ CREEAZĂ O POVESTE MAGICĂ ✨",
-        "processing": "Magia este în curs...",
-    }
-}
-
-# Дизайн
+# --- УЛУЧШЕННЫЙ ДИЗАЙН ---
 st.markdown("""
     <style>
+    /* Основной фон - глубокий космос */
     .stApp { background: #0f172a; color: #f8fafc; }
-    .stButton>button { 
-        height: 100px; font-size: 20px !important; border-radius: 20px; 
-        border: 2px solid #38bdf8; background: #1e293b; color: white;
+    
+    /* Стили для кнопок-плиток */
+    div.stButton > button {
+        border-radius: 20px;
+        height: 120px;
+        width: 100%;
+        border: 2px solid #334155;
+        background-color: #1e293b;
+        color: #94a3b8;
+        transition: all 0.3s ease;
+        font-size: 18px !important;
+        font-weight: bold;
     }
-    .story-output { background: #fdfbf7; color: #1e293b; padding: 35px; border-radius: 25px; font-size: 1.2em; margin-top: 20px;}
-    /* Убираем лишние отступы у колонок */
-    [data-testid="stVerticalBlock"] > div:contains("🌍") { width: 50% !important; }
+
+    /* Эффект при наведении */
+    div.stButton > button:hover {
+        border-color: #38bdf8;
+        color: #38bdf8;
+        transform: translateY(-3px);
+    }
+
+    /* СТИЛЬ ДЛЯ ВЫБРАННОЙ КНОПКИ */
+    /* Мы используем специальный хак, чтобы подсветить кнопку, если ее имя совпадает с выбранной темой */
+    div.stButton > button[kind="primary"] {
+        background: linear-gradient(135deg, #38bdf8 0%, #818cf8 100%) !important;
+        color: white !important;
+        border: none !important;
+        box-shadow: 0 0 20px rgba(56, 189, 248, 0.5);
+        transform: scale(1.02);
+    }
+
+    /* Поле вывода сказки - как старинный пергамент */
+    .story-output { 
+        background: #fdfbf7; 
+        color: #1e293b; 
+        padding: 35px; 
+        border-radius: 25px; 
+        font-size: 1.3em; 
+        margin-top: 20px;
+        box-shadow: inset 0 0 50px rgba(0,0,0,0.05);
+        border: 1px solid #e2e8f0;
+    }
+    
+    /* Поля ввода */
+    .stTextInput input, .stTextArea textarea {
+        background-color: #1e293b !important;
+        color: white !important;
+        border-radius: 10px !important;
+        border: 1px solid #334155 !important;
+    }
     </style>
     """, unsafe_allow_html=True)
 
-if 'theme_idx' not in st.session_state:
-    st.session_state.theme_idx = 0
+# Словарь переводов
+translations = {
+    "Русский": {
+        "themes": ["🛡️ Храбрость", "🍎 Привычки", "🤝 Отношения"],
+        "btn_main": "✨ СОЗДАТЬ ВОЛШЕБНУЮ ИСТОРИЮ ✨",
+        "settings": "👶 Настройки героя", "name": "Имя", "age": "Возраст",
+        "details": "✍️ Добавь подробности:", "proc": "Магия в процессе..."
+    },
+    "English": {
+        "themes": ["🛡️ Bravery", "🍎 Habits", "🤝 Relations"],
+        "btn_main": "✨ CREATE MAGIC STORY ✨",
+        "settings": "👶 Hero Settings", "name": "Name", "age": "Age",
+        "details": "✍️ Add details:", "proc": "Magic in progress..."
+    }
+}
+
+# Инициализация выбора
+if 'theme_idx' not in st.session_state: st.session_state.theme_idx = 0
 
 client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
 
-# --- ВЕРХНЯЯ ПАНЕЛЬ (ЯЗЫК) ---
-# Делаем выбор языка коротким, помещая его в колонку
-col_l_top, _ = st.columns([1, 2])
-with col_l_top:
-    lang = st.selectbox("🌍 Language", ["Русский", "English", "Română"])
-
+# Язык
+col_l, _ = st.columns([1, 2])
+with col_l: lang = st.selectbox("🌍 Language", ["Русский", "English"])
 t = translations[lang]
 
-st.title(t["title"])
-st.write(f"<p style='text-align: center;'>{t['subtitle']}</p>", unsafe_allow_html=True)
+st.title("🌟 NomNom Stories")
 
-st.divider()
-
-# --- НАСТРОЙКИ ГЕРОЯ (ИМЯ И ВОЗРАСТ) ---
+# Настройки героя
 st.markdown(f"### {t['settings']}")
-# Делаем имя коротким, используя колонки. 
-# Соотношение [1, 1, 1] создаст три равные части, имя займет только одну.
-col_name, col_age, _ = st.columns([1.5, 1.5, 1]) 
-with col_name:
-    name = st.text_input(t["name"], value="Даша")
-with col_age:
-    age = st.slider(t["age"], 1, 12, 5)
+c_n, c_a, _ = st.columns([1.5, 1.5, 1])
+with c_n: name = st.text_input(t['name'], value="Даша")
+with c_a: age = st.slider(t['age'], 1, 12, 5)
 
 st.divider()
 
-# --- ВЫБОР ТЕМЫ ---
-st.subheader(f"{t['theme_header']}")
-st.write(f"**{t['selected']}:** {t['themes'][st.session_state.theme_idx]}")
+# ВЫБОР ТЕМЫ
+st.subheader("🎯 Какую тему выберем?")
+cols = st.columns(3)
 
-c1, c2, c3 = st.columns(3)
-with c1:
-    if st.button(t["themes"][0], use_container_width=True):
-        st.session_state.theme_idx = 0
-        st.rerun()
-with c2:
-    if st.button(t["themes"][1], use_container_width=True):
-        st.session_state.theme_idx = 1
-        st.rerun()
-with c3:
-    if st.button(t["themes"][2], use_container_width=True):
-        st.session_state.theme_idx = 2
-        st.rerun()
+for i in range(3):
+    with cols[i]:
+        # Если индекс кнопки совпадает с выбранным, делаем ее "primary" (синей)
+        is_active = "primary" if st.session_state.theme_idx == i else "secondary"
+        if st.button(t['themes'][i], key=f"t_{i}", type=is_active, use_container_width=True):
+            st.session_state.theme_idx = i
+            st.rerun()
 
 st.divider()
+details = st.text_area(t['details'], placeholder="Например: Даша боится пауков...")
 
-details = st.text_area(t["details_label"], placeholder=t["details_ph"])
-
-if st.button(t["button"], type="primary", use_container_width=True):
-    with st.spinner(t["processing"]):
+# Главная кнопка
+if st.button(t['btn_main'], type="primary", use_container_width=True):
+    with st.spinner(t['proc']):
         try:
-            current_theme = t["themes"][st.session_state.theme_idx]
-            prompt = f"Write a long fairy tale in {lang} for {name} ({age} years old). Theme: {current_theme}. Details: {details}. Pixar style."
+            curr_theme = t['themes'][st.session_state.theme_idx]
+            prompt = f"Write a long story for {name} ({age} years old). Theme: {curr_theme}. Details: {details}. Language: {lang}. Pixar style."
             
             res = client.chat.completions.create(model="gpt-4o", messages=[{"role":"user","content":prompt}])
             story = res.choices[0].message.content
             
-            img_res = client.images.generate(model="dall-e-3", prompt=f"Pixar style illustration: {current_theme}, child {name}, {age} years old.")
+            img_res = client.images.generate(model="dall-e-3", prompt=f"Pixar illustration: {curr_theme}, child {name}, {age} years old.")
             audio_res = client.audio.speech.create(model="tts-1", voice="alloy", input=story[:4000])
 
             st.image(img_res.data[0].url, use_container_width=True)
