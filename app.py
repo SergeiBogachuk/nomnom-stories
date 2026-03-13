@@ -57,8 +57,13 @@ else:
     else:
         st.title("✨ Создать сказку")
         cn = st.text_input("Имя ребенка", value="Даша")
-        
-        # Темы теперь будут сворачиваться нормально
+        # --- ДОБАВЛЯЕМ ВЫБОР ЯЗЫКА ---
+selected_lang = st.selectbox("🌍 Язык сказки / Story Language", ["Русский", "English", "Română", "Deutsch"], index=0)
+
+# Теперь обновляем вызов функции генерации (найди кнопку "СОЗДАТЬ МАГИЮ")
+# Внутри if st.button("🚀 СОЗДАТЬ МАГИЮ"):
+# Измени строку вызова функции generate_story_text на эту:
+txt = generate_story_text(cn, selected_lang, skills, details, st.session_state.time_val)        # Темы теперь будут сворачиваться нормально
         all_skills = ["Честность", "Доброта", "Смелость", "Дружба", "Гигиена", "Трудолюбие"]
         skills = st.multiselect("🎯 Чему научим сегодня?", all_skills, default=["Честность"])
         
