@@ -8,7 +8,7 @@ from supabase import create_client, Client
 # --- 1. CONFIG ---
 st.set_page_config(page_title="NomNom Stories", page_icon="🌙", layout="wide")
 
-# --- 2. TRANSLATIONS (БЕЗ КОММЕНТАРИЕВ) ---
+# --- 2. TRANSLATIONS ---
 lang_dict = {
     "Русский": {
         "title": "✨ NomNom Stories (GPT-5.3 PRO)",
@@ -46,23 +46,31 @@ lang_dict = {
     }
 }
 
-# --- 3. СТИЛИ (ЯРКИЕ ЧЕКБОКСЫ) ---
+# --- 3. СТИЛИ (ФИКС ПОДСВЕТКИ КНОПОК) ---
 st.markdown("""
     <style>
     .stApp { background: #0a0f1e; color: #f8fafc; }
     [data-testid="stSidebar"] { background-color: #111827 !important; border-right: 2px solid #38bdf8; }
     
-    /* Кнопки Длительности */
-    div[data-testid="stHorizontalBlock"] div.stButton > button { height: 60px !important; width: 100% !important; border-radius: 12px !important; border: 2px solid #38bdf8 !important; background-color: #1e293b !important; margin-bottom: 10px; }
+    /* Обычная кнопка (не выбрана) */
+    div[data-testid="stHorizontalBlock"] div.stButton > button {
+        height: 60px !important;
+        width: 100% !important;
+        border-radius: 12px !important;
+        border: 2px solid #38bdf8 !important;
+        background-color: #1e293b !important;
+    }
+
+    /* Выбранная кнопка (Primary) */
+    div[data-testid="stHorizontalBlock"] div.stButton > button[kind="primary"] {
+        background: linear-gradient(135deg, #38bdf8 0%, #1e40af 100%) !important;
+        border: none !important;
+        box-shadow: 0px 0px 15px rgba(56, 189, 248, 0.6) !important;
+    }
+
     div.stButton > button p { color: #FFFFFF !important; font-weight: 800 !important; font-size: 16px !important; }
     
-    /* --- НОВОЕ: ЯРКИЙ ТЕКСТ У ГАЛОЧЕК --- */
-    .stCheckbox label p { 
-        color: #FFFFFF !important; 
-        font-weight: 800 !important; 
-        font-size: 16px !important; 
-        text-shadow: 0px 0px 5px rgba(56, 189, 248, 0.5); /* Добавил свечение */
-    }
+    .stCheckbox label p { color: #FFFFFF !important; font-weight: 800 !important; font-size: 16px !important; }
     .stCheckbox { background: #1e293b; padding: 15px; border-radius: 10px; border: 1px solid #38bdf8; margin-bottom: 10px; }
     
     .story-output { background: #ffffff; color: #1e293b !important; padding: 40px; border-radius: 30px; font-size: 1.25em; line-height: 1.8; white-space: pre-wrap; }
@@ -84,8 +92,8 @@ def get_bg_music_html():
 # --- 5. AUTH & UI ---
 if not st.session_state.get("logged_in", False):
     st.title("🌟 NomNom Stories")
-    e = st.text_input("Email")
-    p = st.text_input("Пароль", type="password")
+    e = st.text_input("Email", key="auth_e")
+    p = st.text_input("Пароль", type="password", key="auth_p")
     if st.button("Войти", type="primary", use_container_width=True):
         res = supabase.table("users").select("*").eq("email", e).eq("password", p).execute()
         if res.data:
@@ -150,13 +158,14 @@ else:
         times = [3, 5, 10]
         for i, t in enumerate(times):
             u = "min" if st.session_state.sel_lang == "English" else "мин"
-            if t_cols[i].button(f"{t} {u}", key=f"t_{t}", type="primary" if st.session_state.time_val == t else "secondary", use_container_width=True):
+            # ГЛАВНОЕ ИСПРАВЛЕНИЕ: Кнопка меняет тип на Primary, если выбрана
+            btn_type = "primary" if st.session_state.time_val == t else "secondary"
+            if t_cols[i].button(f"{t} {u}", key=f"t_{t}", type=btn_type, use_container_width=True):
                 st.session_state.time_val = t
                 st.rerun()
 
         details = st.text_area(T['details'])
         
-        # --- ЯРКИЕ ЧЕКБОКСЫ ВЫБОРА ---
         c1, c2 = st.columns(2)
         with c1: gen_img = st.checkbox(T['opt_img'], value=True)
         with c2: pre_audio = st.checkbox(T['opt_audio'], value=False)
