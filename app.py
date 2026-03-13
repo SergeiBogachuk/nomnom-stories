@@ -5,11 +5,10 @@ import streamlit.components.v1 as components
 import base64
 from supabase import create_client, Client
 
-# --- 1. КОНФИГУРАЦИЯ СТРАНИЦЫ И ИКОНКИ ---
+# --- 1. НАСТРОЙКИ СТРАНИЦЫ И ИКОНКИ ---
 st.set_page_config(page_title="NomNom Stories", page_icon="🌙", layout="wide")
 
-# ПУТЬ К ТВОЕМУ ЛОГОТИПУ В GITHUB (замени 'SergeiBogachuk' на твой ник, если отличается)
-# Убедись, что файл в GitHub называется именно 'logo.jpg'
+# Путь к твоему новому логотипу в GitHub (убедись, что файл называется logo.jpg)
 LOGO_URL = "https://raw.githubusercontent.com/SergeiBogachuk/nomnom-stories/main/logo.jpg"
 
 st.markdown(f"""
@@ -21,7 +20,7 @@ st.markdown(f"""
     .stApp {{ background: #0a0f1e; color: #f8fafc; }}
     [data-testid="stSidebar"] {{ background-color: #111827 !important; border-right: 2px solid #38bdf8; }}
     
-    /* Кнопки выбора (Время и Темы) */
+    /* Кнопки выбора */
     div.stButton > button {{
         height: 60px !important;
         border-radius: 12px !important;
@@ -55,13 +54,13 @@ except:
     st.error("Ошибка базы данных")
     st.stop()
 
-# --- 3. ПОМОЩНИКИ ---
+# --- 3. ФУНКЦИИ ---
 def get_audio_js(vol):
     try:
         with open("bg_music.mp3", "rb") as f:
             b64 = base64.b64encode(f.read()).decode()
             return f"""
-            <audio id="bg_music" loop autoplay><source src="data:audio/mp3;base64, {b64}" type="audio/mp3"></audio>
+            <audio id="bg_music" loop autoplay><source src="data:audio/mp3;base64,{b64}" type="audio/mp3"></audio>
             <script>
                 var audio = window.parent.document.getElementById('bg_music');
                 if(audio) {{ audio.volume = {vol}; audio.play(); }}
@@ -101,8 +100,7 @@ else:
     with st.sidebar:
         st.success(f"Аккаунт: {st.session_state.user_email}")
         
-        # БИБЛИОТЕКА С УДАЛЕНИЕМ
-        with st.expander("📚 Моя библиотека"):
+        with st.expander("📚 Мои сказки"):
             stories = supabase.table("stories").select("*").eq("user_email", st.session_state.user_email).order("created_at", desc=True).execute()
             if stories.data:
                 for s in stories.data:
@@ -115,8 +113,6 @@ else:
                     if col_del.button("🗑️", key=f"del_{s['id']}"):
                         supabase.table("stories").delete().eq("id", s['id']).execute()
                         st.rerun()
-            else:
-                st.info("Пока нет сказок")
 
         st.divider()
         VOICES = {"Марина": "ymDCYd8puC7gYjxIamPt", "Николай": "8JVbfL6oEdmuxKn5DK2C"}
@@ -174,17 +170,14 @@ else:
             with st.spinner("Волшебство начинается..."):
                 try:
                     theme = themes[st.session_state.theme_idx]
-                    # Генерация Текста + Названия
                     prompt = f"Напиши сказку для {c_name} на тему {theme}. Сюжет: {details}. Длительность: {st.session_state.time_val} мин. В ПЕРВОЙ строке напиши короткое красивое НАЗВАНИЕ."
                     ch = client.chat.completions.create(model="gpt-4o", messages=[{"role": "user", "content": prompt}])
                     full_resp = ch.choices[0].message.content.split('\n')
                     gen_title = full_resp[0].strip().replace('#', '')
                     gen_text = '\n'.join(full_resp[1:]).strip()
                     
-                    # Картинка
                     img = client.images.generate(model="dall-e-3", prompt=f"Pixar illustration: {gen_title}").data[0].url
                     
-                    # Сохранение с названием
                     supabase.table("stories").insert({"user_email": st.session_state.user_email, "child_name": c_name, "theme": theme, "story_text": gen_text, "image_url": img, "title": gen_title}).execute()
                     
                     st.session_state.view_story = {"title": gen_title, "story_text": gen_text, "image_url": img, "child_name": c_name}
