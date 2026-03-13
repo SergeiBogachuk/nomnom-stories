@@ -8,7 +8,7 @@ from supabase import create_client, Client
 # --- 1. CONFIG ---
 st.set_page_config(page_title="NomNom Stories", page_icon="🌙", layout="wide")
 
-# --- 2. ПЕРЕВОДЫ ---
+# --- 2. TRANSLATIONS ---
 lang_dict = {
     "Русский": {
         "title": "✨ NomNom Stories (GPT-5.3 PRO)",
@@ -21,6 +21,7 @@ lang_dict = {
         "sidebar_library": "📚 Мои сказки",
         "sidebar_voice": "🔊 Голос озвучки",
         "sidebar_new": "➕ Новая сказка",
+        "btn_voice_act": "🔊 Прочитать вслух",
         "voices": {"Марина": "ymDCYd8puC7gYjxIamPt", "Николай": "8JVbfL6oEdmuxKn5DK2C", "Алиса": "EXAVITQu4vr4xnSDxMaL"},
         "skills": ["Честность", "Смелость", "Доброта", "Трудолюбие", "Вежливость", "Гигиена", "Дружба", "Усидчивость"]
     },
@@ -35,6 +36,7 @@ lang_dict = {
         "sidebar_library": "📚 My Stories",
         "sidebar_voice": "🔊 Voice Selection",
         "sidebar_new": "➕ New Story",
+        "btn_voice_act": "🔊 Read Aloud",
         "voices": {"Mary": "ymDCYd8puC7gYjxIamPt", "John": "8JVbfL6oEdmuxKn5DK2C", "Alice": "EXAVITQu4vr4xnSDxMaL"},
         "skills": ["Honesty", "Bravery", "Kindness", "Hard work", "Politeness", "Hygiene", "Friendship", "Patience"]
     }
@@ -51,7 +53,7 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-# --- 3. DATABASE ---
+# --- 3. DATABASE & FUNCTIONS ---
 URL = "https://gdyhmeshafpdttzjpxjg.supabase.co"
 KEY = "sb_publishable_aqJsR96WyEdflsb4LoQSzg_g2WEyWBd"
 supabase = create_client(URL, KEY)
@@ -60,10 +62,10 @@ def get_bg_music_html():
     try:
         with open("bg_music.mp3", "rb") as f:
             data = base64.b64encode(f.read()).decode()
-            return f'<audio autoplay loop><source src="data:audio/mp3;base64,{data}" type="audio/mp3"></audio>'
+            return f'<audio autoplay loop id="bg_music"><source src="data:audio/mp3;base64,{data}" type="audio/mp3"></audio><script>document.getElementById("bg_music").volume = 0.2;</script>'
     except: return ""
 
-# --- 4. MAIN ---
+# --- 4. AUTH ---
 if not st.session_state.get("logged_in", False):
     st.title("🌟 NomNom Stories")
     t1, t2 = st.tabs(["Вход", "Регистрация"])
@@ -75,8 +77,14 @@ if not st.session_state.get("logged_in", False):
             if res.data:
                 st.session_state.logged_in, st.session_state.user_email = True, e
                 st.rerun()
+    with t2:
+        ne, np = st.text_input("New Email", key="r_e"), st.text_input("New Pass", type="password", key="r_p")
+        if st.button("Создать аккаунт", use_container_width=True):
+            supabase.table("users").insert({"email": ne, "password": np}).execute()
+            st.session_state.logged_in, st.session_state.user_email = True, ne
+            st.rerun()
 else:
-    # --- УСТАНОВКА ТОПОВОЙ МОДЕЛИ ---
+    # ИСПОЛЬЗУЕМ ТОПОВУЮ МОДЕЛЬ ИЗ ТВОЕГО СПИСКА
     AI_MODEL = "gpt-5.3-chat-latest"
     client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
     ELEVEN_KEY = st.secrets["ELEVENLABS_API_KEY"]
@@ -136,32 +144,32 @@ else:
         if st.button(T['btn_create'], type="primary", use_container_width=True):
             try:
                 num_chapters = 1 if st.session_state.time_val <= 3 else (2 if st.session_state.time_val <= 5 else 3)
-                full_story_text = ""
+                full_text = ""
                 text_placeholder = st.empty()
 
+                # ГЕНЕРАЦИЯ ПО ГЛАВАМ ДЛЯ МАКСИМАЛЬНОЙ ДЛИНЫ
                 for i in range(num_chapters):
-                    chapter_prompt = f"Write chapter {i+1}/{num_chapters} for a fairy tale about {cn}. Lang: {st.session_state.sel_lang}. Skills: {', '.join(skills)}. Context: {details}. Continue after: {full_story_text[-500:]}"
-                    if i == 0: chapter_prompt += " Put TITLE on 1st line."
+                    chapter_p = f"Write chapter {i+1}/{num_chapters} for a very long fairy tale about {cn}. Lang: {st.session_state.sel_lang}. Themes: {', '.join(skills)}. Plot: {details}. Continue from: {full_text[-500:]}"
+                    if i == 0: chapter_p += " Start with a title on the 1st line."
                     
-                    stream = client.chat.completions.create(model=AI_MODEL, messages=[{"role": "user", "content": chapter_prompt}], stream=True)
+                    stream = client.chat.completions.create(model=AI_MODEL, messages=[{"role": "user", "content": chapter_p}], stream=True)
                     for chunk in stream:
                         if chunk.choices[0].delta.content:
-                            full_story_text += chunk.choices[0].delta.content
-                            text_placeholder.markdown(f'<div class="story-output">{full_story_text}</div>', unsafe_allow_html=True)
+                            full_text += chunk.choices[0].delta.content
+                            text_placeholder.markdown(f'<div class="story-output">{full_text}</div>', unsafe_allow_html=True)
                 
-                gen_title = full_story_text.split('\n')[0].replace('#','').strip()
-                with st.spinner("🎨"):
-                    img_url = client.images.generate(model="dall-e-3", prompt=f"Pixar style: {gen_title}").data[0].url
+                # ТЕПЕРЬ КАРТИНКА И СОХРАНЕНИЕ
+                lines = full_text.split('\n')
+                gen_title = lines[0].replace('#','').strip()
                 
-                supabase.table("stories").insert({"user_email": st.session_state.user_email, "child_name": cn, "title": gen_title, "story_text": full_story_text, "image_url": img_url}).execute()
+                with st.spinner("🎨 Рисуем обложку..."):
+                    img_url = client.images.generate(model="dall-e-3", prompt=f"Pixar style illustration: {gen_title}").data[0].url
+                
+                supabase.table("stories").insert({
+                    "user_email": st.session_state.user_email, "child_name": cn, 
+                    "title": gen_title, "story_text": full_text, "image_url": img_url
+                }).execute()
+                
+                st.session_state.view_story = {"title": gen_title, "story_text": full_text, "image_url": img_url}
                 st.rerun()
-            except Exception as e:
-                # Если 5.3 недоступна, откатываемся на 5.1
-                st.warning("GPT-5.3 pending, trying GPT-5.1...")
-                try:
-                    # Повторная попытка с 5.1
-                    stream = client.chat.completions.create(model="gpt-5.1", messages=[{"role": "user", "content": chapter_prompt}], stream=True)
-                    # ... (логика повтора)
-                    st.info("Switched to GPT-5.1")
-                except:
-                    st.error("Model error. Check API access.")
+            except Exception as e: st.error(f"Error: {e}")
