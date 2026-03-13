@@ -8,7 +8,7 @@ from supabase import create_client, Client
 # --- 1. CONFIG ---
 st.set_page_config(page_title="NomNom Stories", page_icon="🌙", layout="wide")
 
-# --- 2. TRANSLATIONS ---
+# --- 2. TRANSLATIONS (ПОЛНЫЙ СПИСОК КЛЮЧЕЙ) ---
 lang_dict = {
     "Русский": {
         "title": "✨ NomNom Stories (GPT-5.3 PRO)",
@@ -22,7 +22,8 @@ lang_dict = {
         "sidebar_new": "➕ Новая сказка",
         "opt_img": "🎨 Режим: Текст + Картинка",
         "opt_audio": "🎧 Режим: Только Аудио",
-        "voices": {"Марина": "ymDCYd8puC7gYjxIamPt", "Николай": "8JVbfL6oEdmuxKn5DK2C", "Алиса": "EXAVITQu4vr4xnSDxMaL"}
+        "voices": {"Марина": "ymDCYd8puC7gYjxIamPt", "Николай": "8JVbfL6oEdmuxKn5DK2C", "Алиса": "EXAVITQu4vr4xnSDxMaL"},
+        "skills": ["Честность", "Смелость", "Доброта", "Трудолюбие", "Вежливость", "Гигиена", "Дружба", "Усидчивость"]
     },
     "English": {
         "title": "✨ NomNom Stories (GPT-5.3 PRO)",
@@ -36,7 +37,8 @@ lang_dict = {
         "sidebar_new": "➕ New Story",
         "opt_img": "🎨 Mode: Text + Image",
         "opt_audio": "🎧 Mode: Audio Only",
-        "voices": {"Mary": "ymDCYd8puC7gYjxIamPt", "John": "8JVbfL6oEdmuxKn5DK2C", "Alice": "EXAVITQu4vr4xnSDxMaL"}
+        "voices": {"Mary": "ymDCYd8puC7gYjxIamPt", "John": "8JVbfL6oEdmuxKn5DK2C", "Alice": "EXAVITQu4vr4xnSDxMaL"},
+        "skills": ["Honesty", "Bravery", "Kindness", "Hard work", "Politeness", "Hygiene", "Friendship", "Patience"]
     }
 }
 
@@ -73,7 +75,7 @@ def get_speech(text, voice_id, api_key):
 # --- 4. MAIN ---
 if not st.session_state.get("logged_in", False):
     st.title("🌟 NomNom Stories")
-    e, p = st.text_input("Email"), st.text_input("Pass", type="password")
+    e, p = st.text_input("Email", key="auth_email"), st.text_input("Pass", type="password", key="auth_pass")
     if st.button("Войти", type="primary", use_container_width=True):
         res = supabase.table("users").select("*").eq("email", e).eq("password", p).execute()
         if res.data:
@@ -106,37 +108,37 @@ else:
             st.session_state.view_story = None
             st.rerun()
 
-    # --- ЭКРАН РЕЗУЛЬТАТА ---
     if st.session_state.view_story:
         s = st.session_state.view_story
         st.title(f"📖 {s.get('title', 'Story')}")
         
-        # ЛОГИКА ОТОБРАЖЕНИЯ (Режим Аудио или Текст)
         if st.session_state.mode_audio:
-            # РЕЖИМ ТОЛЬКО АУДИО
-            with st.spinner("🔊 Подготавливаем аудио..."):
+            with st.spinner("🔊..."):
                 audio_data = get_speech(s['story_text'], selected_voice_id, ELEVEN_KEY)
                 if audio_data: st.audio(audio_data)
-            st.info("Режим аудиокниги включен. Текст скрыт.")
         else:
-            # РЕЖИМ ТЕКСТ + КАРТИНКА
             if s.get('image_url'): st.image(s['image_url'], use_container_width=True)
             components.html(get_bg_music_html(), height=0)
             st.markdown(f'<div class="story-output">{s["story_text"]}</div>', unsafe_allow_html=True)
             
-    # --- ЭКРАН СОЗДАНИЯ ---
     else:
         st.title(T['title'])
         cn = st.text_input(T['child_name'], value="Даша")
-        st.session_state.sel_lang = st.selectbox("Language", ["Русский", "English"], index=0 if st.session_state.sel_lang == "Русский" else 1)
-        skills = st.multiselect(T['skills_label'], T['skills'], default=[T['skills'][0]])
+        
+        current_lang = st.selectbox("Language / Язык", ["Русский", "English"], index=0 if st.session_state.sel_lang == "Русский" else 1)
+        if current_lang != st.session_state.sel_lang:
+            st.session_state.sel_lang = current_lang
+            st.rerun()
+
+        st.write(T['skills_label'])
+        skills = st.multiselect("", T['skills'], default=[T['skills'][0]])
         
         c1, c2 = st.columns(2)
         with c1: use_img = st.checkbox(T['opt_img'], value=True)
         with c2: use_audio = st.checkbox(T['opt_audio'], value=False)
-        
-        st.session_state.mode_audio = use_audio # Запоминаем режим
+        st.session_state.mode_audio = use_audio
 
+        st.write(T['duration'])
         t_cols = st.columns(3)
         for i, t in enumerate([3, 5, 10]):
             btn_type = "primary" if st.session_state.time_val == t else "secondary"
@@ -147,7 +149,7 @@ else:
         details = st.text_area(T['details'])
 
         if st.button(T['btn_create'], type="primary", use_container_width=True):
-            with st.spinner("✨ Создаем вашу историю..."):
+            with st.spinner("✨..."):
                 try:
                     num_chapters = 1 if st.session_state.time_val <= 3 else (2 if st.session_state.time_val <= 5 else 3)
                     full_text = ""
@@ -158,16 +160,11 @@ else:
 
                     full_text = full_text.replace(":::writing", "").replace("###", "").strip()
                     gen_title = full_text.split('\n')[0].strip()
-                    
                     img_url = None
                     if use_img:
                         img_url = client.images.generate(model="dall-e-3", prompt=f"Pixar style: {gen_title}").data[0].url
                     
-                    supabase.table("stories").insert({
-                        "user_email": st.session_state.user_email, "child_name": cn, 
-                        "title": gen_title, "story_text": full_text, "image_url": img_url
-                    }).execute()
-                    
+                    supabase.table("stories").insert({"user_email": st.session_state.user_email, "child_name": cn, "title": gen_title, "story_text": full_text, "image_url": img_url}).execute()
                     st.session_state.view_story = {"title": gen_title, "story_text": full_text, "image_url": img_url}
                     st.rerun()
                 except Exception as e: st.error(f"Error: {e}")
