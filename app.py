@@ -22,6 +22,8 @@ lang_dict = {
         "sidebar_voice": "🔊 Голос озвучки",
         "sidebar_new": "➕ Новая сказка",
         "btn_voice_act": "🔊 Прочитать вслух",
+        "opt_img": "🎨 Генерировать картинку",
+        "opt_audio": "🎧 Сразу подготовить аудио",
         "voices": {"Марина": "ymDCYd8puC7gYjxIamPt", "Николай": "8JVbfL6oEdmuxKn5DK2C", "Алиса": "EXAVITQu4vr4xnSDxMaL"},
         "skills": ["Честность", "Смелость", "Доброта", "Трудолюбие", "Вежливость", "Гигиена", "Дружба", "Усидчивость"]
     },
@@ -37,6 +39,8 @@ lang_dict = {
         "sidebar_voice": "🔊 Voice Selection",
         "sidebar_new": "➕ New Story",
         "btn_voice_act": "🔊 Read Aloud",
+        "opt_img": "🎨 Generate Image",
+        "opt_audio": "🎧 Pre-generate Audio",
         "voices": {"Mary": "ymDCYd8puC7gYjxIamPt", "John": "8JVbfL6oEdmuxKn5DK2C", "Alice": "EXAVITQu4vr4xnSDxMaL"},
         "skills": ["Honesty", "Bravery", "Kindness", "Hard work", "Politeness", "Hygiene", "Friendship", "Patience"]
     }
@@ -62,29 +66,26 @@ def get_bg_music_html():
     try:
         with open("bg_music.mp3", "rb") as f:
             data = base64.b64encode(f.read()).decode()
-            return f'<audio autoplay loop id="bg_music"><source src="data:audio/mp3;base64,{data}" type="audio/mp3"></audio><script>document.getElementById("bg_music").volume = 0.2;</script>'
+            return f'<audio autoplay loop id="bg_music"><source src="data:audio/mp3;base64,{data}" type="audio/mp3"></audio><script>document.getElementById("bg_music").volume = 0.1;</script>'
     except: return ""
 
-# --- 4. AUTH ---
+def generate_audio(text, voice_id, api_key):
+    res = requests.post(f"https://api.elevenlabs.io/v1/text-to-speech/{voice_id}", 
+                        json={"text": text, "model_id": "eleven_multilingual_v2"}, 
+                        headers={"xi-api-key": api_key})
+    return res.content if res.status_code == 200 else None
+
+# --- 4. MAIN ---
 if not st.session_state.get("logged_in", False):
     st.title("🌟 NomNom Stories")
-    t1, t2 = st.tabs(["Вход", "Регистрация"])
-    with t1:
-        e = st.text_input("Email", key="l_e")
-        p = st.text_input("Пароль", type="password", key="l_p")
-        if st.button("Войти", type="primary", use_container_width=True):
-            res = supabase.table("users").select("*").eq("email", e).eq("password", p).execute()
-            if res.data:
-                st.session_state.logged_in, st.session_state.user_email = True, e
-                st.rerun()
-    with t2:
-        ne, np = st.text_input("New Email", key="r_e"), st.text_input("New Pass", type="password", key="r_p")
-        if st.button("Создать аккаунт", use_container_width=True):
-            supabase.table("users").insert({"email": ne, "password": np}).execute()
-            st.session_state.logged_in, st.session_state.user_email = True, ne
+    e = st.text_input("Email")
+    p = st.text_input("Пароль", type="password")
+    if st.button("Войти"):
+        res = supabase.table("users").select("*").eq("email", e).eq("password", p).execute()
+        if res.data:
+            st.session_state.logged_in, st.session_state.user_email = True, e
             st.rerun()
 else:
-    # ИСПОЛЬЗУЕМ ТОПОВУЮ МОДЕЛЬ ИЗ ТВОЕГО СПИСКА
     AI_MODEL = "gpt-5.3-chat-latest"
     client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
     ELEVEN_KEY = st.secrets["ELEVENLABS_API_KEY"]
@@ -96,18 +97,16 @@ else:
     T = lang_dict[st.session_state.sel_lang]
 
     with st.sidebar:
-        st.success(f"{T['sidebar_acc']}: {st.session_state.user_email}")
+        st.success(f"User: {st.session_state.user_email}")
         with st.expander(T['sidebar_library']):
             stories = supabase.table("stories").select("*").eq("user_email", st.session_state.user_email).order("created_at", desc=True).execute()
             for s in stories.data:
-                if st.button(s.get('title') or s['child_name'], key=f"s_{s['id']}", use_container_width=True):
+                if st.button(s.get('title') or "Story", key=f"s_{s['id']}", use_container_width=True):
                     st.session_state.view_story = s
                     st.rerun()
-
         st.divider()
         selected_voice_name = st.selectbox(T['sidebar_voice'], list(T['voices'].keys()))
         selected_voice_id = T['voices'][selected_voice_name]
-        
         if st.button(T['sidebar_new']):
             st.session_state.view_story = None
             st.rerun()
@@ -115,27 +114,31 @@ else:
     if st.session_state.view_story:
         s = st.session_state.view_story
         st.title(f"📖 {s.get('title', 'Story')}")
-        st.image(s['image_url'], use_container_width=True)
+        if s.get('image_url'): st.image(s['image_url'], use_container_width=True)
         components.html(get_bg_music_html(), height=0)
         
         if st.button(T['btn_voice_act']):
-            with st.spinner("..."):
-                res = requests.post(f"https://api.elevenlabs.io/v1/text-to-speech/{selected_voice_id}", 
-                                    json={"text": s['story_text'], "model_id": "eleven_multilingual_v2"}, 
-                                    headers={"xi-api-key": ELEVEN_KEY})
-                if res.status_code == 200: st.audio(res.content)
+            with st.spinner("🔊 Готовим голос..."):
+                audio_data = generate_audio(s['story_text'], selected_voice_id, ELEVEN_KEY)
+                if audio_data: st.audio(audio_data)
+                else: st.error("Ошибка озвучки")
+        
         st.markdown(f'<div class="story-output">{s["story_text"]}</div>', unsafe_allow_html=True)
     
     else:
         st.title(T['title'])
         cn = st.text_input(T['child_name'], value="Даша")
-        st.session_state.sel_lang = st.selectbox("Language / Язык", ["Русский", "English"], index=0 if st.session_state.sel_lang == "Русский" else 1)
+        st.session_state.sel_lang = st.selectbox("Язык", ["Русский", "English"], index=0 if st.session_state.sel_lang == "Русский" else 1)
         skills = st.multiselect(T['skills_label'], T['skills'], default=[T['skills'][0]])
+        
+        # Настройки генерации
+        col1, col2 = st.columns(2)
+        with col1: gen_img = st.checkbox(T['opt_img'], value=True)
+        with col2: pre_audio = st.checkbox(T['opt_audio'], value=False)
         
         t_cols = st.columns(3)
         for i, t in enumerate([3, 5, 10]):
-            u = "min" if st.session_state.sel_lang == "English" else "мин"
-            if t_cols[i].button(f"{t} {u}", key=f"t_{t}", type="primary" if st.session_state.time_val == t else "secondary", use_container_width=True):
+            if t_cols[i].button(f"{t} min", type="primary" if st.session_state.time_val == t else "secondary", use_container_width=True):
                 st.session_state.time_val = t
                 st.rerun()
 
@@ -147,10 +150,9 @@ else:
                 full_text = ""
                 text_placeholder = st.empty()
 
-                # ГЕНЕРАЦИЯ ПО ГЛАВАМ ДЛЯ МАКСИМАЛЬНОЙ ДЛИНЫ
                 for i in range(num_chapters):
-                    chapter_p = f"Write chapter {i+1}/{num_chapters} for a very long fairy tale about {cn}. Lang: {st.session_state.sel_lang}. Themes: {', '.join(skills)}. Plot: {details}. Continue from: {full_text[-500:]}"
-                    if i == 0: chapter_p += " Start with a title on the 1st line."
+                    chapter_p = f"Write chapter {i+1}/{num_chapters} for a fairy tale about {cn}. Lang: {st.session_state.sel_lang}. Themes: {', '.join(skills)}. Plot: {details}. Context: {full_text[-500:]}"
+                    if i == 0: chapter_p += " Title on 1st line."
                     
                     stream = client.chat.completions.create(model=AI_MODEL, messages=[{"role": "user", "content": chapter_p}], stream=True)
                     for chunk in stream:
@@ -158,12 +160,11 @@ else:
                             full_text += chunk.choices[0].delta.content
                             text_placeholder.markdown(f'<div class="story-output">{full_text}</div>', unsafe_allow_html=True)
                 
-                # ТЕПЕРЬ КАРТИНКА И СОХРАНЕНИЕ
-                lines = full_text.split('\n')
-                gen_title = lines[0].replace('#','').strip()
-                
-                with st.spinner("🎨 Рисуем обложку..."):
-                    img_url = client.images.generate(model="dall-e-3", prompt=f"Pixar style illustration: {gen_title}").data[0].url
+                gen_title = full_text.split('\n')[0].replace('#','').strip()
+                img_url = None
+                if gen_img:
+                    with st.spinner("🎨"):
+                        img_url = client.images.generate(model="dall-e-3", prompt=f"Pixar style: {gen_title}").data[0].url
                 
                 supabase.table("stories").insert({
                     "user_email": st.session_state.user_email, "child_name": cn, 
