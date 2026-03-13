@@ -1,6 +1,7 @@
 import streamlit as st
 from openai import OpenAI
 import requests
+import io
 
 st.set_page_config(page_title="NomNom Stories", page_icon="🌙", layout="centered")
 
@@ -23,7 +24,7 @@ st.markdown("""
 client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
 ELEVEN_KEY = st.secrets["ELEVENLABS_API_KEY"]
 
-def generate_premium_audio(text):
+def get_audio_bytes(text):
     VOICE_ID = "ymDCYd8puC7gYjxIamPt" # Марина
     url = f"https://api.elevenlabs.io/v1/text-to-speech/{VOICE_ID}"
     headers = {"xi-api-key": ELEVEN_KEY, "Content-Type": "application/json"}
@@ -33,8 +34,7 @@ def generate_premium_audio(text):
         "voice_settings": {"stability": 0.6, "similarity_boost": 0.8}
     }
     response = requests.post(url, json=data, headers=headers)
-    if response.status_code == 200:
-        st.audio(response.content, format="audio/mp3")
+    return response.content if response.status_code == 200 else None
 
 # --- ИНТЕРФЕЙС ---
 if 'theme_idx' not in st.session_state: st.session_state.theme_idx = 0
@@ -45,7 +45,7 @@ col1, col2 = st.columns(2)
 with col1: name = st.text_input("Имя ребенка", value="Даша")
 with col2: lang = st.selectbox("Язык", ["Русский", "English"])
 
-story_minutes = st.select_slider("⏳ Длительность сказки", options=[1, 3, 5, 10, 15, 20, 30, 45, 60], value=15)
+story_minutes = st.select_slider("⏳ Длительность", options=[1, 3, 5, 10, 15, 20, 30, 45, 60], value=15)
 
 st.divider()
 themes = ["🛡️ Храбрость", "🍎 Привычки", "🤝 Отношения"]
@@ -59,35 +59,44 @@ for i in range(3):
 details = st.text_area("✍️ Опиши ситуацию:")
 
 if st.button("✨ СОЗДАТЬ БОЛЬШУЮ СКАЗКУ ✨", type="primary", use_container_width=True):
-    with st.spinner("Марина пишет книгу по главам... Это займет около минуты."):
+    with st.spinner("Марина пишет и записывает длинную сказку... Пожалуйста, подожди."):
         try:
             curr_theme = themes[st.session_state.theme_idx]
             
-            # ШАГ 1: Создаем подробный план на 4 главы
-            plan_prompt = f"Составь подробный план сказки из 4 глав для {name}. Тема: {curr_theme}. Ситуация: {details}. План должен быть на языке {lang}."
-            plan_res = client.chat.completions.create(model="gpt-4o", messages=[{"role": "user", "content": plan_prompt}])
+            # 1. План сказки
+            plan_res = client.chat.completions.create(
+                model="gpt-4o", 
+                messages=[{"role": "user", "content": f"Составь план сказки из 4 глав для {name} на {story_minutes} минут. Тема: {curr_theme}. Ситуация: {details}."}]
+            )
             plan = plan_res.choices[0].message.content
             
             full_story = ""
+            all_audio = b"" # Буфер для склейки звука
+            
             chapters_count = 4 if story_minutes >= 15 else 2 if story_minutes >= 5 else 1
             
-            # ШАГ 2: Генерируем каждую главу отдельно для объема
+            # 2. Пошаговая генерация текста и звука
             for i in range(chapters_count):
-                chapter_prompt = f"Напиши главу {i+1} сказки для {name} по этому плану: {plan}. Это должна быть очень длинная глава с множеством диалогов и описаний. Если это последняя глава, добавь ласковое поучение в конце. Предыдущий текст: {full_story[-500:]}"
-                ch_res = client.chat.completions.create(model="gpt-4o", messages=[{"role": "user", "content": chapter_prompt}])
+                st.write(f"📝 Готовим главу {i+1}...")
+                ch_res = client.chat.completions.create(
+                    model="gpt-4o", 
+                    messages=[{"role": "user", "content": f"Напиши главу {i+1} сказки для {name} по этому плану: {plan}. ОЧЕНЬ ПОДРОБНО. Если глава последняя - добавь ласковый вывод. Вот что было до этого: {full_story[-500:]}"}]
+                )
                 chapter_text = ch_res.choices[0].message.content
                 full_story += "\n\n" + chapter_text
-            
-            # Картинка
+                
+                # Сразу получаем озвучку этой главы и добавляем в общий файл
+                audio_part = get_audio_bytes(chapter_text)
+                if audio_part:
+                    all_audio += audio_part
+
+            # Вывод результата
             img_res = client.images.generate(model="dall-e-3", prompt=f"Cozy Pixar illustration: {curr_theme}, child {name}.")
             st.image(img_res.data[0].url, use_container_width=True)
 
-            # ШАГ 3: Озвучка Мариной
-            st.subheader(f"🎙️ Слушаем сказку по главам:")
-            chunks = [full_story[i:i+4000] for i in range(0, len(full_story), 4000)]
-            for idx, chunk in enumerate(chunks):
-                st.write(f"**Часть {idx+1}**")
-                generate_premium_audio(chunk)
+            if all_audio:
+                st.subheader("🎙️ Слушать всю сказку целиком:")
+                st.audio(all_audio, format="audio/mp3")
             
             st.markdown(f'<div class="story-output">{full_story}</div>', unsafe_allow_html=True)
             st.balloons()
