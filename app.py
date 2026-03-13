@@ -4,28 +4,18 @@ import requests
 
 st.set_page_config(page_title="NomNom Stories", page_icon="🌙", layout="centered")
 
-# --- СТИЛЬ (Удобные кнопки и ползунок) ---
+# --- СТИЛЬ ---
 st.markdown("""
     <style>
     .stApp { background: #0f172a; color: #f8fafc; }
-    
-    /* Кнопки тем: средний удобный размер */
     div.stButton > button {
-        height: 70px !important; 
-        font-size: 20px !important; 
-        border-radius: 15px !important;
-        background-color: #1e293b !important;
-        color: white !important;
-        margin-bottom: 10px;
+        height: 70px !important; font-size: 20px !important; border-radius: 15px !important;
+        background-color: #1e293b !important; color: white !important; margin-bottom: 10px;
     }
-
-    /* Активная тема */
     div.stButton > button[kind="primary"] {
         background: linear-gradient(135deg, #38bdf8 0%, #818cf8 100%) !important;
-        box-shadow: 0 0 20px rgba(56, 189, 248, 0.4) !important;
-        border: none !important;
+        box-shadow: 0 0 20px rgba(56, 189, 248, 0.4) !important; border: none !important;
     }
-
     .story-output { background: #fdfbf7; color: #1e293b; padding: 35px; border-radius: 25px; font-size: 1.2em; margin-top: 20px; white-space: pre-wrap; line-height: 1.6; }
     </style>
     """, unsafe_allow_html=True)
@@ -54,12 +44,9 @@ if 'theme_idx' not in st.session_state: st.session_state.theme_idx = 0
 st.title("🌟 NomNom Stories")
 
 col1, col2 = st.columns(2)
-with col1: 
-    name = st.text_input("Имя ребенка", value="Даша")
-with col2: 
-    lang = st.selectbox("Язык", ["Русский", "English"])
+with col1: name = st.text_input("Имя ребенка", value="Даша")
+with col2: lang = st.selectbox("Язык", ["Русский", "English"])
 
-# ВЕРНУЛИ ПОЛЗУНОК, НО СДЕЛАЛИ ЕГО ГИБКИМ (от 1 до 60 минут)
 story_minutes = st.select_slider(
     "⏳ Длительность сказки (в минутах)",
     options=[1, 3, 5, 10, 15, 20, 30, 45, 60],
@@ -80,30 +67,56 @@ for i in range(3):
 details = st.text_area("✍️ Опиши ситуацию:")
 
 if st.button("✨ СОЗДАТЬ ЖИВУЮ СКАЗКУ ✨", type="primary", use_container_width=True):
-    with st.spinner(f"Марина готовит сказку на {story_minutes} мин..."):
+    with st.spinner(f"Марина пишет очень длинную историю на {story_minutes} мин..."):
         try:
             curr_theme = themes[st.session_state.theme_idx]
+            full_story = ""
             
-            # Инструкция для ИИ по объему текста
-            prompt = f"Напиши сказку для {name} на языке {lang}. Текст должен быть очень объемным, чтобы его чтение заняло {story_minutes} минут. Тема: {curr_theme}. Ситуация: {details}. В самом конце Марина должна нежно подытожить смысл сказки для ребенка."
-            
-            res = client.chat.completions.create(model="gpt-4o", messages=[{"role": "user", "content": prompt}])
-            story_text = res.choices[0].message.content
-            
-            # Картинка
+            # --- ЛОГИКА ГЕНЕРАЦИИ ДЛИННОГО ТЕКСТА ---
+            if story_minutes >= 15:
+                # 1. Сначала просим подробный план
+                plan_res = client.chat.completions.create(
+                    model="gpt-4o",
+                    messages=[{"role": "user", "content": f"Составь подробный план сказки из 4 глав для {name} на {story_minutes} минут. Тема: {curr_theme}. Ситуация: {details}."}]
+                )
+                plan = plan_res.choices[0].message.content
+                
+                # 2. Пишем первую часть
+                part1 = client.chat.completions.create(
+                    model="gpt-4o",
+                    messages=[{"role": "user", "content": f"Напиши начало и первые две главы сказки по этому плану: {plan}. Пиши максимально подробно, с диалогами и описаниями природы и чувств героя. Минимум 1500 слов."}]
+                )
+                full_story += part1.choices[0].message.content
+                
+                # 3. Пишем вторую часть
+                part2 = client.chat.completions.create(
+                    model="gpt-4o",
+                    messages=[{"role": "user", "content": f"Продолжи сказку для {name}. Вот начало: {full_story[:500]}. Напиши финальные главы и ласковый вывод. Пиши очень много и подробно."}]
+                )
+                full_story += "\n\n" + part2.choices[0].message.content
+            else:
+                # Для коротких сказок (до 10 минут) обычный запрос
+                res = client.chat.completions.create(
+                    model="gpt-4o",
+                    messages=[{"role": "user", "content": f"Напиши сказку для {name} на {story_minutes} минут. Тема: {curr_theme}. Ситуация: {details}. Будь максимально многословен."}]
+                )
+                full_story = res.choices[0].message.content
+
+            # --- ВЫВОД КАРТИНКИ ---
             img_res = client.images.generate(model="dall-e-3", prompt=f"Pixar illustration: {curr_theme}, child {name}.")
             st.image(img_res.data[0].url, use_container_width=True)
 
-            # Озвучка Мариной (автоматически разбивает на части по 4000 символов)
+            # --- ОЗВУЧКА МАРИНОЙ ---
             st.subheader(f"🎙️ Слушаем сказку:")
-            chunks = [story_text[i:i+4000] for i in range(0, len(story_text), 4000)]
+            # Нарезаем текст для озвучки (по 4000 знаков)
+            chunks = [full_story[i:i+4000] for i in range(0, len(full_story), 4000)]
             
             for idx, chunk in enumerate(chunks):
                 if len(chunks) > 1:
-                    st.write(f"**Часть {idx+1}**")
+                    st.write(f"**Глава {idx+1}**")
                 generate_premium_audio(chunk)
             
-            st.markdown(f'<div class="story-output">{story_text}</div>', unsafe_allow_html=True)
+            st.markdown(f'<div class="story-output">{full_story}</div>', unsafe_allow_html=True)
             st.balloons()
             
         except Exception as e:
