@@ -5,12 +5,13 @@ import streamlit.components.v1 as components
 import base64
 from supabase import create_client, Client
 
-# --- 1. НАСТРОЙКИ СТРАНИЦЫ И ИКОНКИ ---
+# --- 1. КОНФИГУРАЦИЯ ---
 st.set_page_config(page_title="NomNom Stories", page_icon="🌙", layout="wide")
 
-# Путь к твоему новому логотипу в GitHub (убедись, что файл называется logo.jpg)
+# Твой логотип в GitHub
 LOGO_URL = "https://raw.githubusercontent.com/SergeiBogachuk/nomnom-stories/main/logo.jpg"
 
+# --- 2. ИСПРАВЛЕННЫЙ ДИЗАЙН ---
 st.markdown(f"""
     <head>
         <link rel="apple-touch-icon" href="{LOGO_URL}">
@@ -20,7 +21,7 @@ st.markdown(f"""
     .stApp {{ background: #0a0f1e; color: #f8fafc; }}
     [data-testid="stSidebar"] {{ background-color: #111827 !important; border-right: 2px solid #38bdf8; }}
     
-    /* Кнопки выбора */
+    /* Кнопки выбора (Время и Темы) */
     div.stButton > button {{
         height: 60px !important;
         border-radius: 12px !important;
@@ -40,11 +41,19 @@ st.markdown(f"""
         background: linear-gradient(135deg, #38bdf8 0%, #1e40af 100%) !important;
     }}
 
-    .story-output {{ background: #ffffff; color: #1e293b !important; padding: 40px; border-radius: 30px; font-size: 1.25em; line-height: 1.8; }}
+    /* Поле текста сказки */
+    .story-output {{ 
+        background: #ffffff; 
+        color: #1e293b !important; 
+        padding: 40px; 
+        border-radius: 30px; 
+        font-size: 1.25em; 
+        line-height: 1.8; 
+    }}
     </style>
     """, unsafe_allow_html=True)
 
-# --- 2. ПОДКЛЮЧЕНИЕ К БАЗЕ ---
+# --- 3. ПОДКЛЮЧЕНИЕ К БАЗЕ ---
 URL = "https://gdyhmeshafpdttzjpxjg.supabase.co"
 KEY = "sb_publishable_aqJsR96WyEdflsb4LoQSzg_g2WEyWBd"
 
@@ -54,7 +63,7 @@ except:
     st.error("Ошибка базы данных")
     st.stop()
 
-# --- 3. ФУНКЦИИ ---
+# --- 4. ФУНКЦИИ ---
 def get_audio_js(vol):
     try:
         with open("bg_music.mp3", "rb") as f:
@@ -68,7 +77,7 @@ def get_audio_js(vol):
             """
     except: return ""
 
-# --- 4. АВТОРИЗАЦИЯ ---
+# --- 5. АВТОРИЗАЦИЯ ---
 if not st.session_state.get("logged_in", False):
     st.title("🌟 NomNom Stories")
     t1, t2 = st.tabs(["Вход", "Регистрация"])
@@ -88,7 +97,7 @@ if not st.session_state.get("logged_in", False):
             st.session_state.logged_in, st.session_state.user_email = True, ne
             st.rerun()
 else:
-    # --- ГЛАВНЫЙ ИНТЕРФЕЙС ---
+    # --- ОСНОВНОЙ ИНТЕРФЕЙС ---
     client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
     ELEVEN_KEY = st.secrets["ELEVENLABS_API_KEY"]
     
@@ -113,13 +122,15 @@ else:
                     if col_del.button("🗑️", key=f"del_{s['id']}"):
                         supabase.table("stories").delete().eq("id", s['id']).execute()
                         st.rerun()
+            else:
+                st.info("Пока нет сказок")
 
         st.divider()
         VOICES = {"Марина": "ymDCYd8puC7gYjxIamPt", "Николай": "8JVbfL6oEdmuxKn5DK2C"}
         voice_opt = st.selectbox("Голос", list(VOICES.keys()))
         vol = st.slider("Громкость музыки", 0.0, 1.0, 0.2)
         
-        if st.button("➕ Создать новую"):
+        if st.button("➕ Новая сказка"):
             st.session_state.view_story, st.session_state.play_music = None, False
             st.rerun()
         if st.button("Выйти"):
@@ -173,7 +184,7 @@ else:
                     prompt = f"Напиши сказку для {c_name} на тему {theme}. Сюжет: {details}. Длительность: {st.session_state.time_val} мин. В ПЕРВОЙ строке напиши короткое красивое НАЗВАНИЕ."
                     ch = client.chat.completions.create(model="gpt-4o", messages=[{"role": "user", "content": prompt}])
                     full_resp = ch.choices[0].message.content.split('\n')
-                    gen_title = full_resp[0].strip().replace('#', '')
+                    gen_title = full_resp[0].strip().replace('#', '').replace('*', '')
                     gen_text = '\n'.join(full_resp[1:]).strip()
                     
                     img = client.images.generate(model="dall-e-3", prompt=f"Pixar illustration: {gen_title}").data[0].url
