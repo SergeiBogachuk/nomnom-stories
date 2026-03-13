@@ -3,59 +3,68 @@ import streamlit as st
 def apply_styles():
     st.markdown("""
         <style>
+        /* 1. ФОН */
         .stApp {
             background: linear-gradient(rgba(10, 20, 40, 0.85), rgba(10, 20, 40, 0.85)), 
                         url("https://images.unsplash.com/photo-1419242902214-272b3f66ee7a?q=80&w=2013&auto=format&fit=crop") !important;
             background-size: cover !important;
         }
 
-        /* ТЕКСТ ВНУТРИ ПОЛЕЙ ВВОДА - ДЕЛАЕМ ТЕМНЫМ ДЛЯ ВИДИМОСТИ */
-        input, textarea, [data-baseweb="select"] * {
-            color: #1e293b !important;
-            font-weight: 500 !important;
+        /* 2. СЖИМАЕМ ДЛИННЫЕ ЛИНИИ (Центрируем контент) */
+        [data-testid="stMainViewContainer"] [data-testid="stVerticalBlock"] > div {
+            max-width: 650px !important;
+            margin-left: auto !important;
+            margin-right: auto !important;
         }
 
-        /* Заголовки полей (Имя ребенка, Тема и т.д.) */
-        label p {
-            color: #ffffff !important;
-            font-size: 1.1rem !important;
-            text-shadow: 1px 1px 2px #000;
+        /* 3. ИСПРАВЛЯЕМ САЙДБАР (Список сказок) */
+        [data-testid="stSidebar"] {
+            background-color: #050a18 !important;
         }
 
-        /* САЙДБАР И ЭКСПАНДЕР (СВОРАЧИВАНИЕ) */
-        [data-testid="stSidebar"] { background-color: #050a18 !important; }
-        
-        /* Стиль выпадающего списка */
-        details {
-            border: 1px solid #38bdf8 !important;
-            border-radius: 10px !important;
-            padding: 10px !important;
-            background: rgba(56, 189, 248, 0.05) !important;
-        }
-        summary {
-            color: #38bdf8 !important;
-            font-weight: bold !important;
-            cursor: pointer !important;
+        /* Убираем рамки и квадраты вокруг кнопок в сайдбаре */
+        [data-testid="stSidebar"] button {
+            border: none !important;
+            background: transparent !important;
+            box-shadow: none !important;
+            color: white !important;
+            text-align: left !important;
+            justify-content: flex-start !important;
+            padding: 5px 0px !important;
         }
 
-        /* Кнопки времени и создания */
+        /* Кнопка-корзинка (🗑️) без рамок */
+        button[key*="del_"] {
+            background: transparent !important;
+            border: none !important;
+            color: #ff4b4b !important;
+            padding: 0 !important;
+            min-width: 25px !important;
+        }
+
+        /* 4. ТЕКСТ В ПОЛЯХ (чтобы было видно, что пишешь) */
+        input, textarea {
+            color: #1e293b !important; /* Темный текст в белых полях */
+            background-color: #ffffff !important;
+        }
+
+        /* 5. КНОПКИ ВРЕМЕНИ (чтобы не были белыми) */
         div[data-testid="stHorizontalBlock"] button {
             background-color: #1e293b !important;
             color: white !important;
             border: 1px solid #38bdf8 !important;
+            text-align: center !important;
         }
+        
         button[kind="primary"] {
             background: linear-gradient(135deg, #38bdf8, #1e40af) !important;
-            border: none !important;
         }
 
-        /* Кнопка удаления (🗑️) */
-        .del-btn {
+        /* Кнопка ВЫХОД (Красная) */
+        [data-testid="stSidebar"] .stButton:last-child button {
+            border: 1px solid #ff4b4b !important;
             color: #ff4b4b !important;
-            background: transparent !important;
-            border: none !important;
-            font-size: 0.9rem !important;
-            text-align: right !important;
+            margin-top: 20px !important;
         }
         </style>
         """, unsafe_allow_html=True)
