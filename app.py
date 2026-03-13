@@ -5,7 +5,7 @@ import streamlit.components.v1 as components
 import base64
 from supabase import create_client, Client
 
-# --- 1. НАСТРОЙКИ ---
+# --- 1. КОНФИГУРАЦИЯ ---
 st.set_page_config(page_title="NomNom Stories", page_icon="🌙", layout="wide")
 
 URL = "https://gdyhmeshafpdttzjpxjg.supabase.co"
@@ -17,38 +17,41 @@ except:
     st.error("Ошибка базы данных")
     st.stop()
 
-# --- 2. ЖЕСТКИЙ СТИЛЬ (ДЛЯ БЕЛЫХ КНОПОК И ДИЗАЙНА) ---
+# --- 2. СТИЛИ (ФИНАЛЬНЫЙ ДИЗАЙН) ---
 st.markdown("""
     <style>
     .stApp { background: #0a0f1e; color: #f8fafc; }
     [data-testid="stSidebar"] { background-color: #111827 !important; border-right: 2px solid #38bdf8; }
     
-    /* Кнопки выбора (Время и Темы) */
+    /* Кнопки выбора */
     div.stButton > button {
-        height: 60px !important;
+        height: 55px !important;
         border-radius: 12px !important;
         border: 2px solid #38bdf8 !important;
         background-color: #1e293b !important;
     }
 
-    /* ПРИНУДИТЕЛЬНО БЕЛЫЙ ТЕКСТ НА ВСЕХ КНОПКАХ */
+    /* ТЕКСТ НА КНОПКАХ - ВСЕГДА БЕЛЫЙ И ЖИРНЫЙ */
     div.stButton > button p {
         color: #FFFFFF !important; 
         font-weight: 800 !important;
-        font-size: 16px !important;
+        font-size: 15px !important;
     }
 
-    /* Активная кнопка */
     div.stButton > button[kind="primary"] {
         background: linear-gradient(135deg, #38bdf8 0%, #1e40af 100%) !important;
     }
 
     .story-output { background: #ffffff; color: #1e293b !important; padding: 40px; border-radius: 30px; font-size: 1.25em; line-height: 1.8; }
+    
+    /* Скрыть лишние элементы Streamlit */
+    #MainMenu {visibility: hidden;}
+    footer {visibility: hidden;}
     </style>
     """, unsafe_allow_html=True)
 
-# --- 3. ФУНКЦИИ ЗВУКА ---
-def play_music_js(vol):
+# --- 3. ПОМОЩНИКИ ---
+def get_audio_js(vol):
     try:
         with open("bg_music.mp3", "rb") as f:
             b64 = base64.b64encode(f.read()).decode()
@@ -63,91 +66,79 @@ def play_music_js(vol):
             """
     except: return ""
 
-# --- 4. ЛОГИКА ВХОДА ---
+# --- 4. ВХОД / РЕГИСТРАЦИЯ ---
 if not st.session_state.get("logged_in", False):
     st.title("🌟 NomNom Stories")
-    tab1, tab2 = st.tabs(["Вход", "Регистрация"])
-    with tab1:
-        e = st.text_input("Email", key="l_email")
-        p = st.text_input("Пароль", type="password", key="l_pass")
+    t1, t2 = st.tabs(["Вход", "Регистрация"])
+    with t1:
+        e = st.text_input("Email")
+        p = st.text_input("Пароль", type="password")
         if st.button("Войти", type="primary", use_container_width=True):
             res = supabase.table("users").select("*").eq("email", e).eq("password", p).execute()
-            if len(res.data) > 0:
-                st.session_state.logged_in = True
-                st.session_state.user_email = e
+            if res.data:
+                st.session_state.logged_in, st.session_state.user_email = True, e
                 st.rerun()
-    with tab2:
-        ne = st.text_input("Новый Email", key="r_email")
-        np = st.text_input("Пароль", type="password", key="r_pass")
+    with t2:
+        ne, np = st.text_input("Новый Email"), st.text_input("Новый Пароль", type="password")
         if st.button("Создать аккаунт", use_container_width=True):
             supabase.table("users").insert({"email": ne, "password": np}).execute()
-            st.session_state.logged_in = True
-            st.session_state.user_email = ne
+            st.session_state.logged_in, st.session_state.user_email = True, ne
             st.rerun()
 else:
-    # --- ГЛАВНЫЙ ЭКРАН ---
+    # --- ОСНОВНОЙ ИНТЕРФЕЙС ---
     client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
     ELEVEN_KEY = st.secrets["ELEVENLABS_API_KEY"]
     
-    if 'theme_idx' not in st.session_state: st.session_state.theme_idx = 0
     if 'time_val' not in st.session_state: st.session_state.time_val = 5
+    if 'theme_idx' not in st.session_state: st.session_state.theme_idx = 0
     if 'view_story' not in st.session_state: st.session_state.view_story = None
-    if 'play_audio' not in st.session_state: st.session_state.play_audio = False
+    if 'play_music' not in st.session_state: st.session_state.play_music = False
 
     with st.sidebar:
-        st.success(f"Аккаунт: {st.session_state['user_email']}")
+        st.success(f"Аккаунт: {st.session_state.user_email}")
         
-        # --- СКРЫТЫЙ СПИСОК СКАЗОК (ЭКСКЛЮЗИВНО) ---
         with st.expander("📚 Моя библиотека"):
-            res = supabase.table("stories").select("*").eq("user_email", st.session_state["user_email"]).order("created_at", desc=True).execute()
-            if res.data:
-                for s in res.data:
-                    if st.button(f"{s['theme'].split()[0]} | {s['child_name']}", key=f"s_{s['id']}", use_container_width=True):
-                        st.session_state.view_story = s
-                        st.session_state.play_audio = True # Включаем музыку при просмотре
-                        st.rerun()
-            else:
-                st.write("Пока пусто")
+            stories = supabase.table("stories").select("*").eq("user_email", st.session_state.user_email).order("created_at", desc=True).execute()
+            for s in stories.data:
+                title = s.get('title') or f"Сказка для {s['child_name']}"
+                if st.button(title, key=f"s_{s['id']}", use_container_width=True):
+                    st.session_state.view_story = s
+                    st.session_state.play_music = True
+                    st.rerun()
 
         st.divider()
         VOICES = {"Марина": "ymDCYd8puC7gYjxIamPt", "Николай": "8JVbfL6oEdmuxKn5DK2C"}
-        selected_voice = st.selectbox("Голос", list(VOICES.keys()))
-        music_vol = st.slider("Громкость музыки", 0.0, 1.0, 0.25)
+        voice = st.selectbox("Голос", list(VOICES.keys()))
+        vol = st.slider("Громкость", 0.0, 1.0, 0.2)
         
         if st.button("➕ Новая сказка"):
-            st.session_state.view_story = None
-            st.session_state.play_audio = False
+            st.session_state.view_story, st.session_state.play_music = None, False
             st.rerun()
         if st.button("Выйти"):
             st.session_state.clear()
             st.rerun()
 
-    # --- ВКЛЮЧАЕМ МУЗЫКУ ТОЛЬКО ЕСЛИ НУЖНО ---
-    if st.session_state.play_audio:
-        components.html(play_music_js(music_vol), height=0)
+    if st.session_state.play_music:
+        components.html(get_audio_js(vol), height=0)
 
     if st.session_state.view_story:
         s = st.session_state.view_story
-        st.title(f"📖 Сказка для {s['child_name']}")
+        st.title(f"📖 {s.get('title', 'Ваша сказка')}")
         st.image(s['image_url'], use_container_width=True)
         
-        if st.button("🔊 Прочитать вслух"):
-            with st.spinner("Марина начинает рассказ..."):
-                aud_res = requests.post(
-                    f"https://api.elevenlabs.io/v1/text-to-speech/{VOICES[selected_voice]}",
-                    json={"text": s['story_text'], "model_id": "eleven_multilingual_v2"},
-                    headers={"xi-api-key": ELEVEN_KEY}
-                )
-                if aud_res.status_code == 200:
-                    st.audio(aud_res.content, format="audio/mp3")
+        c1, c2 = st.columns(2)
+        with c1:
+            if st.button("🔊 Озвучить"):
+                res = requests.post(f"https://api.elevenlabs.io/v1/text-to-speech/{VOICES[voice]}", json={"text": s['story_text'], "model_id": "eleven_multilingual_v2"}, headers={"xi-api-key": ELEVEN_KEY})
+                if res.status_code == 200: st.audio(res.content)
+        with c2:
+            st.download_button("📩 Скачать текст", s['story_text'], file_name="story.txt")
 
         st.markdown(f'<div class="story-output">{s["story_text"]}</div>', unsafe_allow_html=True)
     
     else:
         st.title("✨ Мастерская Сказок")
-        col1, col2 = st.columns(2)
-        with col1: child_name = st.text_input("Имя ребенка", value="Даша")
-        with col2: lang = st.selectbox("Язык", ["Русский", "English"])
+        cn = st.text_input("Имя ребенка", value="Даша")
         
         st.write("⏳ Длительность:")
         t_cols = st.columns(3)
@@ -167,19 +158,22 @@ else:
         details = st.text_area("✍️ Краткий сюжет")
 
         if st.button("🚀 СОЗДАТЬ МАГИЮ ✨", type="primary", use_container_width=True):
-            with st.spinner("Волшебство начинается..."):
+            with st.spinner("Создаем шедевр..."):
                 try:
-                    curr_theme = themes[st.session_state.theme_idx]
-                    img_res = client.images.generate(model="dall-e-3", prompt=f"Pixar illustration, {curr_theme}, child {child_name}.")
-                    img_url = img_res.data[0].url
+                    theme = themes[st.session_state.theme_idx]
+                    # Генерация Текста + Названия
+                    ch = client.chat.completions.create(model="gpt-4o", messages=[{"role": "user", "content": f"Напиши сказку для {cn} на тему {theme}. Сюжет: {details}. В конце через разделитель ### напиши короткое красивое название сказки из 3-4 слов."}])
+                    raw_data = ch.choices[0].message.content.split("###")
+                    txt = raw_data[0].strip()
+                    title = raw_data[1].strip() if len(raw_data) > 1 else f"Сказка для {cn}"
                     
-                    ch_res = client.chat.completions.create(model="gpt-4o", messages=[{"role": "user", "content": f"Напиши сказку для {child_name}, тема {curr_theme}, сюжет {details}. Язык {lang}."}])
-                    story_text = ch_res.choices[0].message.content
+                    # Картинка
+                    img = client.images.generate(model="dall-e-3", prompt=f"Pixar illustration: {title}").data[0].url
                     
-                    supabase.table("stories").insert({"user_email": st.session_state.user_email, "child_name": child_name, "theme": curr_theme, "story_text": story_text, "image_url": img_url}).execute()
+                    # Сохранение с названием
+                    supabase.table("stories").insert({"user_email": st.session_state.user_email, "child_name": cn, "theme": theme, "story_text": txt, "image_url": img, "title": title}).execute()
                     
-                    st.session_state.view_story = {"child_name": child_name, "image_url": img_url, "story_text": story_text}
-                    st.session_state.play_audio = True # ВКЛЮЧАЕМ МУЗЫКУ ПОСЛЕ ГЕНЕРАЦИИ
+                    st.session_state.view_story = {"title": title, "story_text": txt, "image_url": img, "child_name": cn}
+                    st.session_state.play_music = True
                     st.rerun()
-                except Exception as e:
-                    st.error(f"Ошибка: {e}")
+                except Exception as e: st.error(f"Ошибка: {e}")
