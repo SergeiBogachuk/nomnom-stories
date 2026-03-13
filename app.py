@@ -8,8 +8,41 @@ from supabase import create_client, Client
 # --- 1. CONFIG ---
 st.set_page_config(page_title="NomNom Stories", page_icon="🌙", layout="wide")
 
-# Логотип
 LOGO = "https://raw.githubusercontent.com/SergeiBogachuk/nomnom-stories/main/logo.jpg"
+
+# --- 2. TRANSLATIONS DICTIONARY ---
+lang_dict = {
+    "Русский": {
+        "title": "✨ Мастерская Сказок",
+        "child_name": "Имя ребенка",
+        "skills_label": "🎯 Чему научим ребенка сегодня?",
+        "duration": "⏳ Длительность:",
+        "details": "✍️ Дополнительные детали сюжета",
+        "btn_create": "🚀 СОЗДАТЬ МАГИЮ ✨",
+        "sidebar_acc": "Аккаунт",
+        "sidebar_library": "📚 Мои сказки",
+        "sidebar_voice": "🔊 Голос озвучки",
+        "sidebar_new": "➕ Новая сказка",
+        "sidebar_exit": "Выйти",
+        "btn_voice_act": "🔊 Прочитать вслух",
+        "skills": ["Честность", "Смелость", "Доброта", "Трудолюбие", "Вежливость", "Гигиена", "Дружба", "Усидчивость"]
+    },
+    "English": {
+        "title": "✨ Story Workshop",
+        "child_name": "Child's Name",
+        "skills_label": "🎯 What should we teach today?",
+        "duration": "⏳ Duration:",
+        "details": "✍️ Additional plot details",
+        "btn_create": "🚀 CREATE MAGIC ✨",
+        "sidebar_acc": "Account",
+        "sidebar_library": "📚 My Stories",
+        "sidebar_voice": "🔊 Text-to-Speech Voice",
+        "sidebar_new": "➕ New Story",
+        "sidebar_exit": "Exit",
+        "btn_voice_act": "🔊 Read Aloud",
+        "skills": ["Honesty", "Bravery", "Kindness", "Hard work", "Politeness", "Hygiene", "Friendship", "Patience"]
+    }
+}
 
 st.markdown(f"""
     <style>
@@ -24,16 +57,17 @@ st.markdown(f"""
     div.stButton > button p {{ color: #FFFFFF !important; font-weight: 800 !important; font-size: 15px !important; }}
     div.stButton > button[kind="primary"] {{ background: linear-gradient(135deg, #38bdf8 0%, #1e40af 100%) !important; }}
     .story-output {{ background: #ffffff; color: #1e293b !important; padding: 40px; border-radius: 30px; font-size: 1.25em; line-height: 1.8; }}
+    span[data-baseweb="tag"] {{ background-color: #38bdf8 !important; color: white !important; }}
     </style>
     <link rel="apple-touch-icon" href="{LOGO}">
     """, unsafe_allow_html=True)
 
-# --- 2. БАЗА И API ---
+# --- 3. DATABASE ---
 URL = "https://gdyhmeshafpdttzjpxjg.supabase.co"
 KEY = "sb_publishable_aqJsR96WyEdflsb4LoQSzg_g2WEyWBd"
 supabase: Client = create_client(URL, KEY)
 
-# --- 3. ЛОГИКА АВТОРИЗАЦИИ ---
+# --- 4. AUTH ---
 if not st.session_state.get("logged_in", False):
     st.title("🌟 NomNom Stories")
     t1, t2 = st.tabs(["Вход", "Регистрация"])
@@ -53,21 +87,23 @@ if not st.session_state.get("logged_in", False):
             st.session_state.logged_in, st.session_state.user_email = True, ne
             st.rerun()
 else:
-    # --- ГЛАВНЫЙ ЭКРАН ---
+    # --- UI LOGIC ---
     client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
     ELEVEN_KEY = st.secrets["ELEVENLABS_API_KEY"]
     
-    # Инициализация
     if 'time_val' not in st.session_state: st.session_state.time_val = 5
     if 'view_story' not in st.session_state: st.session_state.view_story = None
+    if 'sel_lang' not in st.session_state: st.session_state.sel_lang = "Русский"
+
+    T = lang_dict[st.session_state.sel_lang]
 
     with st.sidebar:
-        st.success(f"Аккаунт: {st.session_state.user_email}")
-        with st.expander("📚 Мои сказки"):
+        st.success(f"{T['sidebar_acc']}: {st.session_state.user_email}")
+        with st.expander(T['sidebar_library']):
             stories = supabase.table("stories").select("*").eq("user_email", st.session_state.user_email).order("created_at", desc=True).execute()
             for s in stories.data:
                 c_b, c_d = st.columns([0.8, 0.2])
-                title = s.get('title') or f"Сказка для {s['child_name']}"
+                title = s.get('title') or f"Story for {s['child_name']}"
                 if c_b.button(title, key=f"s_{s['id']}", use_container_width=True):
                     st.session_state.view_story = s
                     st.rerun()
@@ -76,96 +112,63 @@ else:
                     st.rerun()
 
         st.divider()
-        # ВЫБОР ГОЛОСА
-        VOICES = {
-            "Марина (Женский)": "ymDCYd8puC7gYjxIamPt", 
-            "Николай (Мужской)": "8JVbfL6oEdmuxKn5DK2C",
-            "Алиса (Детский)": "EXAVITQu4vr4xnSDxMaL"
-        }
-        selected_voice = st.selectbox("🔊 Выберите голос", list(VOICES.keys()))
+        VOICES = {"Марина": "ymDCYd8puC7gYjxIamPt", "Николай": "8JVbfL6oEdmuxKn5DK2C", "Алиса": "EXAVITQu4vr4xnSDxMaL"}
+        selected_voice = st.selectbox(T['sidebar_voice'], list(VOICES.keys()))
         
-        if st.button("➕ Новая сказка"):
+        if st.button(T['sidebar_new']):
             st.session_state.view_story = None
             st.rerun()
-        if st.button("Выйти"):
+        if st.button(T['sidebar_exit']):
             st.session_state.clear()
             st.rerun()
 
     if st.session_state.view_story:
         s = st.session_state.view_story
-        st.title(f"📖 {s.get('title', 'Твоя сказка')}")
+        st.title(f"📖 {s.get('title', 'Story')}")
         st.image(s['image_url'], use_container_width=True)
-        
-        if st.button("🔊 Включить озвучку"):
-            with st.spinner("Готовим аудио..."):
+        if st.button(T['btn_voice_act']):
+            with st.spinner("..."):
                 res = requests.post(f"https://api.elevenlabs.io/v1/text-to-speech/{VOICES[selected_voice]}", 
                                     json={"text": s['story_text'], "model_id": "eleven_multilingual_v2"}, 
                                     headers={"xi-api-key": ELEVEN_KEY})
                 if res.status_code == 200: st.audio(res.content)
-        
         st.markdown(f'<div class="story-output">{s["story_text"]}</div>', unsafe_allow_html=True)
     
     else:
-        st.title("✨ Мастерская Сказок")
-        
+        st.title(T['title'])
         col_name, col_lang = st.columns(2)
-        with col_name: cn = st.text_input("Имя ребенка", value="Даша")
-        with col_lang: lang = st.selectbox("Язык", ["Русский", "English"])
+        with col_name: cn = st.text_input(T['child_name'], value="Даша")
+        with col_lang: 
+            new_lang = st.selectbox("Language / Язык", ["Русский", "English"], index=0 if st.session_state.sel_lang == "Русский" else 1)
+            if new_lang != st.session_state.sel_lang:
+                st.session_state.sel_lang = new_lang
+                st.rerun()
         
-        # НОВЫЕ ПАРАМЕТРЫ
-        st.write("🎯 Чему научим ребенка?")
-        skills = st.multiselect("Выберите навыки", 
-                                ["Честность", "Смелость", "Доброта", "Трудолюбие", "Вежливость", "Гигиена", "Дружба"],
-                                default=["Смелость"])
+        st.write(T['skills_label'])
+        skills = st.multiselect("", T['skills'], default=[T['skills'][0]])
         
-        st.write("⏳ Длительность:")
+        st.write(T['duration'])
         t_cols = st.columns(3)
         for i, t in enumerate([3, 5, 10]):
-            if t_cols[i].button(f"{t} мин", key=f"t_{t}", type="primary" if st.session_state.time_val == t else "secondary", use_container_width=True):
+            if t_cols[i].button(f"{t} min", key=f"t_{t}", type="primary" if st.session_state.time_val == t else "secondary", use_container_width=True):
                 st.session_state.time_val = t
                 st.rerun()
 
-        details = st.text_area("✍️ Краткий сюжет (о чем должна быть история?)")
+        details = st.text_area(T['details'])
 
-        if st.button("🚀 СОЗДАТЬ МАГИЮ ✨", type="primary", use_container_width=True):
+        if st.button(T['btn_create'], type="primary", use_container_width=True):
             try:
-                # 1. Сначала генерируем заголовок и Текст (Потоком для скорости)
-                prompt = f"Напиши сказку для {cn} на языке {lang}. Темы: {', '.join(skills)}. Сюжет: {details}. Длительность: {st.session_state.time_val} мин. ПЕРВАЯ СТРОКА - Название, затем текст."
-                
-                # Заготовка под текст
+                prompt = f"Write a fairy tale for {cn} in {st.session_state.sel_lang}. Skills: {', '.join(skills)}. Plot: {details}. Duration: {st.session_state.time_val} min. Title on FIRST line."
                 full_text = ""
                 text_placeholder = st.empty()
-                
-                # Потоковая генерация через OpenAI
-                stream = client.chat.completions.create(
-                    model="gpt-4o",
-                    messages=[{"role": "user", "content": prompt}],
-                    stream=True
-                )
-                
+                stream = client.chat.completions.create(model="gpt-4o", messages=[{"role": "user", "content": prompt}], stream=True)
                 for chunk in stream:
-                    if chunk.choices[0].delta.content is not None:
+                    if chunk.choices[0].delta.content:
                         full_text += chunk.choices[0].delta.content
                         text_placeholder.markdown(f'<div class="story-output">{full_text}</div>', unsafe_allow_html=True)
-
-                # 2. Теперь, когда текст готов, генерируем картинку
                 lines = full_text.split('\n')
                 gen_title = lines[0].replace('#', '').strip()
-                
-                with st.spinner("Рисуем картинку..."):
-                    img_url = client.images.generate(model="dall-e-3", prompt=f"Pixar illustration: {gen_title}").data[0].url
-                
-                # 3. Сохраняем в базу
-                supabase.table("stories").insert({
-                    "user_email": st.session_state.user_email,
-                    "child_name": cn,
-                    "title": gen_title,
-                    "story_text": full_text,
-                    "image_url": img_url
-                }).execute()
-                
-                st.success("Готово! Сказка сохранена.")
+                img_url = client.images.generate(model="dall-e-3", prompt=f"Pixar style: {gen_title}").data[0].url
+                supabase.table("stories").insert({"user_email": st.session_state.user_email, "child_name": cn, "title": gen_title, "story_text": full_text, "image_url": img_url}).execute()
                 st.rerun()
-                
-            except Exception as e:
-                st.error(f"Ошибка: {e}")
+            except Exception as e: st.error(f"Error: {e}")
