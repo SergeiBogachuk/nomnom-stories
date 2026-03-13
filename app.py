@@ -36,9 +36,9 @@ ELEVEN_KEY = st.secrets["ELEVENLABS_API_KEY"]
 
 # --- БАЗА ГОЛОСОВ (Сюда добавляй новые ID из ElevenLabs) ---
 VOICES = {
-    "Марина (Добрая)": "ymDCYd8puC7gYjxIamPt",
-    "Johnny (Нежная)": "8JVbfL6oEdmuxKn5DK2C", # Замени на реальный ID, когда выберешь
-    "Фея (Волшебная)": "flHkNRp1BlvT73UL6gyz"  # Замени на реальный ID
+    "Марина ": "ymDCYd8puC7gYjxIamPt",
+    "Johnny ": "8JVbfL6oEdmuxKn5DK2C", # Замени на реальный ID, когда выберешь
+    "Фея ": "flHkNRp1BlvT73UL6gyz"  # Замени на реальный ID
 }
 
 MUSIC_URLS = {
