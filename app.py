@@ -8,7 +8,7 @@ from supabase import create_client, Client
 # --- 1. CONFIG ---
 st.set_page_config(page_title="NomNom Stories", page_icon="🌙", layout="wide")
 
-# --- 2. TRANSLATIONS ---
+# --- 2. TRANSLATIONS (FIXED) ---
 lang_dict = {
     "Русский": {
         "title": "✨ NomNom Stories (GPT-5.3 PRO)",
@@ -23,7 +23,7 @@ lang_dict = {
         "sidebar_new": "➕ Новая сказка",
         "btn_voice_act": "🔊 Прочитать вслух",
         "opt_img": "🎨 Генерировать картинку",
-        "opt_audio": "🎧 Сразу подготовить аудио",
+        "opt_audio": "🎧 Подготовить аудио",
         "voices": {"Марина": "ymDCYd8puC7gYjxIamPt", "Николай": "8JVbfL6oEdmuxKn5DK2C", "Алиса": "EXAVITQu4vr4xnSDxMaL"},
         "skills": ["Честность", "Смелость", "Доброта", "Трудолюбие", "Вежливость", "Гигиена", "Дружба", "Усидчивость"]
     },
@@ -40,24 +40,38 @@ lang_dict = {
         "sidebar_new": "➕ New Story",
         "btn_voice_act": "🔊 Read Aloud",
         "opt_img": "🎨 Generate Image",
-        "opt_audio": "🎧 Pre-generate Audio",
+        "opt_audio": "🎧 Prepare Audio",
         "voices": {"Mary": "ymDCYd8puC7gYjxIamPt", "John": "8JVbfL6oEdmuxKn5DK2C", "Alice": "EXAVITQu4vr4xnSDxMaL"},
         "skills": ["Honesty", "Bravery", "Kindness", "Hard work", "Politeness", "Hygiene", "Friendship", "Patience"]
     }
 }
 
+# --- 3. СТИЛИ (ИСПРАВЛЕННАЯ СЕТКА) ---
 st.markdown("""
     <style>
     .stApp { background: #0a0f1e; color: #f8fafc; }
     [data-testid="stSidebar"] { background-color: #111827 !important; border-right: 2px solid #38bdf8; }
-    div.stButton > button { height: 55px !important; border-radius: 12px !important; border: 2px solid #38bdf8 !important; background-color: #1e293b !important; }
-    div.stButton > button p { color: #FFFFFF !important; font-weight: 800 !important; font-size: 15px !important; }
-    div.stButton > button[kind="primary"] { background: linear-gradient(135deg, #38bdf8 0%, #1e40af 100%) !important; }
+    
+    /* Кнопки Длительности */
+    div[data-testid="stHorizontalBlock"] div.stButton > button {
+        height: 60px !important;
+        width: 100% !important;
+        border-radius: 12px !important;
+        border: 2px solid #38bdf8 !important;
+        background-color: #1e293b !important;
+        margin-bottom: 10px;
+    }
+
+    div.stButton > button p { color: #FFFFFF !important; font-weight: 800 !important; font-size: 16px !important; }
+    
+    /* Чекбоксы */
+    .stCheckbox { background: #1e293b; padding: 15px; border-radius: 10px; border: 1px solid #38bdf8; margin-bottom: 10px; }
+    
     .story-output { background: #ffffff; color: #1e293b !important; padding: 40px; border-radius: 30px; font-size: 1.25em; line-height: 1.8; white-space: pre-wrap; }
     </style>
     """, unsafe_allow_html=True)
 
-# --- 3. DATABASE & FUNCTIONS ---
+# --- 4. DATABASE & API ---
 URL = "https://gdyhmeshafpdttzjpxjg.supabase.co"
 KEY = "sb_publishable_aqJsR96WyEdflsb4LoQSzg_g2WEyWBd"
 supabase = create_client(URL, KEY)
@@ -69,18 +83,12 @@ def get_bg_music_html():
             return f'<audio autoplay loop id="bg_music"><source src="data:audio/mp3;base64,{data}" type="audio/mp3"></audio><script>document.getElementById("bg_music").volume = 0.1;</script>'
     except: return ""
 
-def generate_audio(text, voice_id, api_key):
-    res = requests.post(f"https://api.elevenlabs.io/v1/text-to-speech/{voice_id}", 
-                        json={"text": text, "model_id": "eleven_multilingual_v2"}, 
-                        headers={"xi-api-key": api_key})
-    return res.content if res.status_code == 200 else None
-
-# --- 4. MAIN ---
+# --- 5. AUTH & UI ---
 if not st.session_state.get("logged_in", False):
     st.title("🌟 NomNom Stories")
     e = st.text_input("Email")
     p = st.text_input("Пароль", type="password")
-    if st.button("Войти"):
+    if st.button("Войти", type="primary", use_container_width=True):
         res = supabase.table("users").select("*").eq("email", e).eq("password", p).execute()
         if res.data:
             st.session_state.logged_in, st.session_state.user_email = True, e
@@ -105,7 +113,8 @@ else:
                     st.session_state.view_story = s
                     st.rerun()
         st.divider()
-        selected_voice_name = st.selectbox(T['sidebar_voice'], list(T['voices'].keys()))
+        v_list = list(T['voices'].keys())
+        selected_voice_name = st.selectbox(T['sidebar_voice'], v_list)
         selected_voice_id = T['voices'][selected_voice_name]
         if st.button(T['sidebar_new']):
             st.session_state.view_story = None
@@ -117,28 +126,39 @@ else:
         if s.get('image_url'): st.image(s['image_url'], use_container_width=True)
         components.html(get_bg_music_html(), height=0)
         
-        if st.button(T['btn_voice_act']):
-            with st.spinner("🔊 Готовим голос..."):
-                audio_data = generate_audio(s['story_text'], selected_voice_id, ELEVEN_KEY)
-                if audio_data: st.audio(audio_data)
-                else: st.error("Ошибка озвучки")
+        if st.button(T['btn_voice_act'], type="primary"):
+            with st.spinner("🔊"):
+                res = requests.post(f"https://api.elevenlabs.io/v1/text-to-speech/{selected_voice_id}", 
+                                    json={"text": s['story_text'], "model_id": "eleven_multilingual_v2"}, 
+                                    headers={"xi-api-key": ELEVEN_KEY})
+                if res.status_code == 200: st.audio(res.content)
         
         st.markdown(f'<div class="story-output">{s["story_text"]}</div>', unsafe_allow_html=True)
     
     else:
         st.title(T['title'])
         cn = st.text_input(T['child_name'], value="Даша")
-        st.session_state.sel_lang = st.selectbox("Язык", ["Русский", "English"], index=0 if st.session_state.sel_lang == "Русский" else 1)
-        skills = st.multiselect(T['skills_label'], T['skills'], default=[T['skills'][0]])
         
-        # Настройки генерации
-        col1, col2 = st.columns(2)
-        with col1: gen_img = st.checkbox(T['opt_img'], value=True)
-        with col2: pre_audio = st.checkbox(T['opt_audio'], value=False)
+        # Переключение языка (сразу обновляет интерфейс)
+        new_lang = st.selectbox("Language / Язык", ["Русский", "English"], index=0 if st.session_state.sel_lang == "Русский" else 1)
+        if new_lang != st.session_state.sel_lang:
+            st.session_state.sel_lang = new_lang
+            st.rerun()
+
+        st.write(T['skills_label'])
+        skills = st.multiselect("", T['skills'], default=[T['skills'][0]])
         
+        # Настройки генерации в красивых блоках
+        c1, c2 = st.columns(2)
+        with c1: gen_img = st.checkbox(T['opt_img'], value=True)
+        with c2: pre_audio = st.checkbox(T['opt_audio'], value=False)
+        
+        st.write(T['duration'])
         t_cols = st.columns(3)
-        for i, t in enumerate([3, 5, 10]):
-            if t_cols[i].button(f"{t} min", type="primary" if st.session_state.time_val == t else "secondary", use_container_width=True):
+        times = [3, 5, 10]
+        for i, t in enumerate(times):
+            u = "min" if st.session_state.sel_lang == "English" else "мин"
+            if t_cols[i].button(f"{t} {u}", key=f"t_{t}", type="primary" if st.session_state.time_val == t else "secondary", use_container_width=True):
                 st.session_state.time_val = t
                 st.rerun()
 
@@ -151,7 +171,7 @@ else:
                 text_placeholder = st.empty()
 
                 for i in range(num_chapters):
-                    chapter_p = f"Write chapter {i+1}/{num_chapters} for a fairy tale about {cn}. Lang: {st.session_state.sel_lang}. Themes: {', '.join(skills)}. Plot: {details}. Context: {full_text[-500:]}"
+                    chapter_p = f"Write chapter {i+1}/{num_chapters} for a fairy tale for {cn}. Lang: {st.session_state.sel_lang}. Skills: {', '.join(skills)}. Plot: {details}. Continue from: {full_text[-500:]}"
                     if i == 0: chapter_p += " Title on 1st line."
                     
                     stream = client.chat.completions.create(model=AI_MODEL, messages=[{"role": "user", "content": chapter_p}], stream=True)
