@@ -1,97 +1,55 @@
 import streamlit as st
-from openai import OpenAI
-import requests
-import streamlit.components.v1 as components
 import base64
-from supabase import create_client, Client
+import streamlit.components.v1 as components
 
-# --- 1. CONFIG ---
+# Импортируем наши модули
+from styles import apply_styles
+from database import check_user, get_user_stories, save_story, update_audio
+from ai_engine import generate_story_text, generate_image, get_speech_b64
+
+# --- ПОДГОТОВКА ---
 st.set_page_config(page_title="NomNom Stories", page_icon="🌙", layout="wide")
-
-# --- 2. TRANSLATIONS ---
-lang_dict = {
-    "Русский": {
-        "title": "✨ NomNom Stories (GPT-5.3 PRO)",
-        "child_name": "Имя ребенка",
-        "skills_label": "🎯 Чему научим сегодня?",
-        "duration": "⏳ Длительность:",
-        "details": "✍️ О чем будет сказка?",
-        "btn_create": "🚀 СОЗДАТЬ МАГИЮ ✨",
-        "sidebar_library": "📚 Мои сказки",
-        "sidebar_voice": "🔊 Голос",
-        "sidebar_new": "➕ Новая сказка",
-        "opt_img": "🎨 Режим: Текст + Картинка",
-        "opt_audio": "🎧 Режим: Только Аудио",
-        "voices": {"Марина": "ymDCYd8puC7gYjxIamPt", "Николай": "8JVbfL6oEdmuxKn5DK2C", "Алиса": "EXAVITQu4vr4xnSDxMaL"},
-        "skills": ["Честность", "Смелость", "Доброта", "Трудолюбие", "Вежливость", "Гигиена", "Дружба", "Усидчивость"]
-    },
-    "English": {
-        "title": "✨ NomNom Stories (GPT-5.3 PRO)",
-        "child_name": "Child's Name",
-        "skills_label": "🎯 Lesson for today?",
-        "duration": "⏳ Duration:",
-        "details": "✍️ Story plot?",
-        "btn_create": "🚀 CREATE MAGIC ✨",
-        "sidebar_library": "📚 My Stories",
-        "sidebar_voice": "🔊 Voice",
-        "sidebar_new": "➕ New Story",
-        "opt_img": "🎨 Mode: Text + Image",
-        "opt_audio": "🎧 Mode: Audio Only",
-        "voices": {"Mary": "ymDCYd8puC7gYjxIamPt", "John": "8JVbfL6oEdmuxKn5DK2C", "Alice": "EXAVITQu4vr4xnSDxMaL"},
-        "skills": ["Honesty", "Bravery", "Kindness", "Hard work", "Politeness", "Hygiene", "Friendship", "Patience"]
-    }
-}
-
-st.markdown("""
-    <style>
-    .stApp { background: #0a0f1e; color: #f8fafc; }
-    [data-testid="stSidebar"] { background-color: #111827 !important; border-right: 2px solid #38bdf8; }
-    div[data-testid="stHorizontalBlock"] div.stButton > button { height: 60px !important; border-radius: 12px !important; border: 2px solid #38bdf8 !important; background-color: #1e293b !important; }
-    div.stButton > button[kind="primary"] { background: linear-gradient(135deg, #38bdf8 0%, #1e40af 100%) !important; border: none !important; }
-    .stCheckbox { background: #1e293b; padding: 15px; border-radius: 10px; border: 1px solid #38bdf8; margin-bottom: 10px; }
-    .stCheckbox label p { color: #FFFFFF !important; font-weight: 800 !important; font-size: 16px !important; }
-    .story-output { background: #ffffff; color: #1e293b !important; padding: 40px; border-radius: 30px; font-size: 1.25em; line-height: 1.8; white-space: pre-wrap; }
-    </style>
-    """, unsafe_allow_html=True)
-
-# --- 3. FUNCTIONS ---
-URL = "https://gdyhmeshafpdttzjpxjg.supabase.co"
-KEY = "sb_publishable_aqJsR96WyEdflsb4LoQSzg_g2WEyWBd"
-supabase = create_client(URL, KEY)
+apply_styles()
 
 def get_bg_music_html():
     try:
         with open("bg_music.mp3", "rb") as f:
             data = base64.b64encode(f.read()).decode()
-            return f'''
-            <audio autoplay loop id="bg_music"><source src="data:audio/mp3;base64,{data}" type="audio/mp3"></audio>
-            <script>
-                var audio = window.parent.document.getElementById("bg_music");
-                if (audio) {{ audio.volume = 0.15; audio.play(); }}
-            </script>
-            '''
+            return f'<audio autoplay loop id="bg_music"><source src="data:audio/mp3;base64,{data}" type="audio/mp3"></audio><script>document.getElementById("bg_music").volume = 0.1;</script>'
     except: return ""
 
-def get_speech(text, voice_id, api_key):
-    res = requests.post(f"https://api.elevenlabs.io/v1/text-to-speech/{voice_id}", 
-                        json={"text": text, "model_id": "eleven_multilingual_v2"}, 
-                        headers={"xi-api-key": api_key})
-    return res.content if res.status_code == 200 else None
+# --- ПЕРЕВОДЫ ---
+lang_dict = {
+    "Русский": {
+        "title": "✨ NomNom Stories (GPT-5.3 PRO)",
+        "child_name": "Имя ребенка", "skills_label": "🎯 Чему научим сегодня?",
+        "duration": "⏳ Длительность:", "details": "✍️ О чем будет сказка?",
+        "btn_create": "🚀 СОЗДАТЬ МАГИЮ ✨", "sidebar_library": "📚 Мои сказки",
+        "sidebar_voice": "🔊 Голос", "sidebar_new": "➕ Новая сказка",
+        "opt_img": "🎨 Режим: Текст + Картинка", "opt_audio": "🎧 Режим: Только Аудио",
+        "voices": {"Марина": "ymDCYd8puC7gYjxIamPt", "Николай": "8JVbfL6oEdmuxKn5DK2C", "Алиса": "EXAVITQu4vr4xnSDxMaL"},
+        "skills": ["Честность", "Смелость", "Доброта", "Трудолюбие", "Вежливость", "Гигиена", "Дружба", "Усидчивость"]
+    },
+    "English": {
+        "title": "✨ NomNom Stories (GPT-5.3 PRO)",
+        "child_name": "Child's Name", "skills_label": "🎯 Lesson?",
+        "duration": "⏳ Duration:", "details": "✍️ Plot?",
+        "btn_create": "🚀 CREATE MAGIC ✨", "sidebar_library": "📚 My Stories",
+        "sidebar_voice": "🔊 Voice", "sidebar_new": "➕ New Story",
+        "opt_img": "🎨 Text + Image", "opt_audio": "🎧 Audio Only"
+    }
+}
 
-# --- 4. MAIN ---
+# --- ЛОГИКА ПРИЛОЖЕНИЯ ---
 if not st.session_state.get("logged_in", False):
     st.title("🌟 NomNom Stories")
-    e, p = st.text_input("Email", key="ae"), st.text_input("Pass", type="password", key="ap")
+    e = st.text_input("Email", key="login_email")
+    p = st.text_input("Пароль", type="password", key="login_pass")
     if st.button("Войти", type="primary", use_container_width=True):
-        res = supabase.table("users").select("*").eq("email", e).eq("password", p).execute()
-        if res.data:
+        if check_user(e, p):
             st.session_state.logged_in, st.session_state.user_email = True, e
             st.rerun()
 else:
-    AI_MODEL = "gpt-5.3-chat-latest"
-    client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
-    ELEVEN_KEY = st.secrets["ELEVENLABS_API_KEY"]
-    
     if 'time_val' not in st.session_state: st.session_state.time_val = 5
     if 'view_story' not in st.session_state: st.session_state.view_story = None
     if 'sel_lang' not in st.session_state: st.session_state.sel_lang = "Русский"
@@ -102,7 +60,7 @@ else:
     with st.sidebar:
         st.success(f"User: {st.session_state.user_email}")
         with st.expander(T['sidebar_library']):
-            stories = supabase.table("stories").select("*").eq("user_email", st.session_state.user_email).order("created_at", desc=True).execute()
+            stories = get_user_stories(st.session_state.user_email)
             for s in stories.data:
                 if st.button(s.get('title') or "Story", key=f"s_{s['id']}", use_container_width=True):
                     st.session_state.view_story = s
@@ -114,50 +72,42 @@ else:
             st.session_state.view_story = None
             st.rerun()
 
-    # --- ОТОБРАЖЕНИЕ РЕЗУЛЬТАТА ---
+    # --- ОТОБРАЖЕНИЕ ---
     if st.session_state.view_story:
         s = st.session_state.view_story
         st.title(f"📖 {s.get('title', 'Story')}")
-        
-        # МУЗЫКА ТЕПЕРЬ ТУТ (ВЫШЕ ВСЕХ РЕЖИМОВ)
         components.html(get_bg_music_html(), height=0)
         
-        if st.session_state.mode_audio:
-            # РЕЖИМ ТОЛЬКО АУДИО
-            with st.spinner("🔊..."):
-                audio_data = get_speech(s['story_text'], selected_voice_id, ELEVEN_KEY)
-                if audio_data: st.audio(audio_data)
+        # Экономия баллов (Берем из базы)
+        if s.get('audio_base64'):
+            st.audio(base64.b64decode(s['audio_base64']))
+            st.success("✨ Загружено бесплатно из памяти")
         else:
-            # РЕЖИМ ТЕКСТ + КАРТИНКА
+            if st.button("🔊 Озвучить (тратит баллы)", type="primary"):
+                with st.spinner("Озвучиваем..."):
+                    audio_b64 = get_speech_b64(s['story_text'], selected_voice_id)
+                    if audio_b64:
+                        update_audio(s['id'], audio_b64)
+                        st.audio(base64.b64decode(audio_b64))
+                        st.rerun()
+
+        if not st.session_state.mode_audio:
             if s.get('image_url'): st.image(s['image_url'], use_container_width=True)
-            if st.button("🔊 Прочитать вслух"):
-                with st.spinner("..."):
-                    audio_data = get_speech(s['story_text'], selected_voice_id, ELEVEN_KEY)
-                    if audio_data: st.audio(audio_data)
             st.markdown(f'<div class="story-output">{s["story_text"]}</div>', unsafe_allow_html=True)
             
     else:
-        # --- ЭКРАН СОЗДАНИЯ ---
         st.title(T['title'])
         cn = st.text_input(T['child_name'], value="Даша")
-        current_lang = st.selectbox("Language / Язык", ["Русский", "English"], index=0 if st.session_state.sel_lang == "Русский" else 1)
-        if current_lang != st.session_state.sel_lang:
-            st.session_state.sel_lang = current_lang
-            st.rerun()
-
-        st.write(T['skills_label'])
-        skills = st.multiselect("", T['skills'], default=[T['skills'][0]])
+        st.session_state.sel_lang = st.selectbox("Lang", ["Русский", "English"], index=0 if st.session_state.sel_lang == "Русский" else 1)
         
         c1, c2 = st.columns(2)
         with c1: use_img = st.checkbox(T['opt_img'], value=True)
         with c2: use_audio = st.checkbox(T['opt_audio'], value=False)
         st.session_state.mode_audio = use_audio
 
-        st.write(T['duration'])
         t_cols = st.columns(3)
         for i, t in enumerate([3, 5, 10]):
-            btn_type = "primary" if st.session_state.time_val == t else "secondary"
-            if t_cols[i].button(f"{t} min", key=f"t_{t}", type=btn_type, use_container_width=True):
+            if t_cols[i].button(f"{t} min", type="primary" if st.session_state.time_val == t else "secondary", use_container_width=True):
                 st.session_state.time_val = t
                 st.rerun()
 
@@ -166,20 +116,10 @@ else:
         if st.button(T['btn_create'], type="primary", use_container_width=True):
             with st.spinner("✨..."):
                 try:
-                    num_chapters = 1 if st.session_state.time_val <= 3 else (2 if st.session_state.time_val <= 5 else 3)
-                    full_text = ""
-                    for i in range(num_chapters):
-                        p = f"Write chapter {i+1}/{num_chapters} for a fairy tale for {cn}. Lang: {st.session_state.sel_lang}. Skills: {', '.join(skills)}. Plot: {details}. Continue from: {full_text[-500:]}"
-                        res = client.chat.completions.create(model=AI_MODEL, messages=[{"role": "user", "content": p}])
-                        full_text += res.choices[0].message.content
-
-                    full_text = full_text.replace(":::writing", "").replace("###", "").strip()
-                    gen_title = full_text.split('\n')[0].strip()
-                    img_url = None
-                    if use_img:
-                        img_url = client.images.generate(model="dall-e-3", prompt=f"Pixar style: {gen_title}").data[0].url
+                    txt = generate_story_text(cn, st.session_state.sel_lang, [T['skills'][0]], details, st.session_state.time_val)
+                    ttl = txt.split('\n')[0].strip()
+                    url = generate_image(ttl) if use_img else None
                     
-                    supabase.table("stories").insert({"user_email": st.session_state.user_email, "child_name": cn, "title": gen_title, "story_text": full_text, "image_url": img_url}).execute()
-                    st.session_state.view_story = {"title": gen_title, "story_text": full_text, "image_url": img_url}
+                    save_story({"user_email": st.session_state.user_email, "child_name": cn, "title": ttl, "story_text": txt, "image_url": url})
                     st.rerun()
                 except Exception as e: st.error(f"Error: {e}")
