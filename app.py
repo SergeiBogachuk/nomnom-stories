@@ -2,14 +2,14 @@ import streamlit as st
 from openai import OpenAI
 import requests
 
-# 1. Настройка стиля (Детский и яркий)
+# 1. Настройка стиля
 st.set_page_config(page_title="NomNom Stories", page_icon="🎨", layout="wide")
 
 st.markdown("""
     <style>
     .stApp { background: #0e1117; color: #ffffff; }
     .story-box { background: white; color: #2d3436; padding: 30px; border-radius: 20px; font-size: 1.2em; line-height: 1.6; border: 5px solid #6C5CE7; }
-    .stButton>button { background: #6C5CE7; color: white; border-radius: 50px; font-size: 20px; padding: 20px; width: 100%; border: none; box-shadow: 0 4px 15px rgba(108, 92, 231, 0.4); }
+    .stButton>button { background: #6C5CE7; color: white; border-radius: 50px; font-size: 20px; padding: 20px; width: 100%; border: none; }
     h1, h2 { text-align: center; color: #FF7675; }
     </style>
     """, unsafe_allow_html=True)
@@ -40,31 +40,29 @@ if st.button("✨ СОЗДАТЬ СКАЗКУ ✨"):
         st.error("Вставь ключ слева!")
     else:
         client = OpenAI(api_key=api_key)
-        with st.spinner('Рисуем картинку и сочиняем историю...'):
+        with st.spinner('Магия в процессе... Рисуем и пишем...'):
             try:
                 # ГЕНЕРАЦИЯ ТЕКСТА
-                len_prompt = "Напиши длинную сказку на 10 абзацев." if length == "Длинная (на 5 минут)" else "Напиши короткую сказку."
-                user_msg = f"{len_prompt} Имя ребенка: {name}, возраст {age}. Тема: {theme}. Детали: {details}. Язык: {lang}. Сделай сказку психологической и доброй."
+                len_instr = "Напиши длинную сказку на 10 абзацев." if length == "Длинная (на 5 минут)" else "Напиши короткую сказку."
+                full_prompt = f"{len_instr} Имя ребенка: {name}, возраст {age}. Тема: {theme}. Детали: {details}. Язык: {lang}. Сделай сказку психологической и доброй."
                 
-                response = client.chat.completions.create(
+                text_res = client.chat.completions.create(
                     model="gpt-4o",
-                    messages=[{"role": "user", "content": user_prompt}]
+                    messages=[{"role": "user", "content": full_prompt}]
                 )
-                story_text = response.choices[0].message.content
+                story_text = text_res.choices[0].message.content
 
                 # ГЕНЕРАЦИЯ КАРТИНКИ
-                img_prompt = f"Детская книжная иллюстрация в стиле {style}. Девочка {name}, {age} лет, в центре сюжета: {theme}. Яркие цвета, магическая атмосфера, милая."
+                img_prompt = f"Детская книжная иллюстрация в стиле {style}. Девочка {name}, {age} лет. Сюжет: {theme}. Детали: {details}. Яркие цвета, милая атмосфера."
                 img_res = client.images.generate(model="dall-e-3", prompt=img_prompt, size="1024x1024", n=1)
                 img_url = img_res.data[0].url
 
-                # ОЗВУЧКА (АУДИО)
-                audio_res = client.audio.speech.create(model="tts-1", voice="alloy", input=story_text[:4000]) # Озвучиваем первые 4000 символов
+                # ОЗВУЧКА
+                audio_res = client.audio.speech.create(model="tts-1", voice="alloy", input=story_text[:4000])
                 
-                # ВЫВОД РЕЗУЛЬТАТА
-                st.image(img_url, use_column_width=True)
-                
-                st.audio(audio_res.content) # Появится плеер!
-                
+                # ВЫВОД
+                st.image(img_url, use_container_width=True) # Исправил параметр на современный
+                st.audio(audio_res.content) 
                 st.markdown(f'<div class="story-box">{story_text}</div>', unsafe_allow_html=True)
                 st.balloons()
 
