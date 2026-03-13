@@ -2,12 +2,10 @@ import streamlit as st
 import base64
 import streamlit.components.v1 as components
 
-# Импортируем наши модули
 from styles import apply_styles
 from database import check_user, get_user_stories, save_story, update_audio
 from ai_engine import generate_story_text, generate_image, get_speech_b64
 
-# --- ПОДГОТОВКА ---
 st.set_page_config(page_title="NomNom Stories", page_icon="🌙", layout="wide")
 apply_styles()
 
@@ -40,16 +38,26 @@ lang_dict = {
     }
 }
 
-# --- ЛОГИКА ПРИЛОЖЕНИЯ ---
+# --- ЛОГИКА ---
 if not st.session_state.get("logged_in", False):
     st.title("🌟 NomNom Stories")
-    e = st.text_input("Email", key="login_email")
-    p = st.text_input("Пароль", type="password", key="login_pass")
-    if st.button("Войти", type="primary", use_container_width=True):
-        if check_user(e, p):
-            st.session_state.logged_in, st.session_state.user_email = True, e
-            st.rerun()
+    
+    # ФОРМА ДЛЯ ВХОДА ПО ENTER
+    with st.form("login_form"):
+        e = st.text_input("Email")
+        p = st.text_input("Пароль", type="password")
+        submit = st.form_submit_button("Войти", type="primary", use_container_width=True)
+        
+        if submit:
+            res = check_user(e, p)
+            if res:
+                st.session_state.logged_in, st.session_state.user_email = True, e
+                st.rerun()
+            else:
+                st.error("Неверный логин или пароль")
+
 else:
+    # (Остальной код остается таким же, как был ранее)
     if 'time_val' not in st.session_state: st.session_state.time_val = 5
     if 'view_story' not in st.session_state: st.session_state.view_story = None
     if 'sel_lang' not in st.session_state: st.session_state.sel_lang = "Русский"
@@ -72,19 +80,16 @@ else:
             st.session_state.view_story = None
             st.rerun()
 
-    # --- ОТОБРАЖЕНИЕ ---
     if st.session_state.view_story:
         s = st.session_state.view_story
         st.title(f"📖 {s.get('title', 'Story')}")
         components.html(get_bg_music_html(), height=0)
         
-        # Экономия баллов (Берем из базы)
         if s.get('audio_base64'):
             st.audio(base64.b64decode(s['audio_base64']))
-            st.success("✨ Загружено бесплатно из памяти")
         else:
-            if st.button("🔊 Озвучить (тратит баллы)", type="primary"):
-                with st.spinner("Озвучиваем..."):
+            if st.button("🔊 Озвучить", type="primary"):
+                with st.spinner("..."):
                     audio_b64 = get_speech_b64(s['story_text'], selected_voice_id)
                     if audio_b64:
                         update_audio(s['id'], audio_b64)
@@ -98,7 +103,12 @@ else:
     else:
         st.title(T['title'])
         cn = st.text_input(T['child_name'], value="Даша")
-        st.session_state.sel_lang = st.selectbox("Lang", ["Русский", "English"], index=0 if st.session_state.sel_lang == "Русский" else 1)
+        current_lang = st.selectbox("Language / Язык", ["Русский", "English"], index=0 if st.session_state.sel_lang == "Русский" else 1)
+        if current_lang != st.session_state.sel_lang:
+            st.session_state.sel_lang = current_lang
+            st.rerun()
+
+        skills = st.multiselect(T['skills_label'], T.get('skills', ["Доброта"]), default=[T.get('skills', ["Доброта"])[0]])
         
         c1, c2 = st.columns(2)
         with c1: use_img = st.checkbox(T['opt_img'], value=True)
@@ -107,7 +117,7 @@ else:
 
         t_cols = st.columns(3)
         for i, t in enumerate([3, 5, 10]):
-            if t_cols[i].button(f"{t} min", type="primary" if st.session_state.time_val == t else "secondary", use_container_width=True):
+            if t_cols[i].button(f"{t} min", key=f"t_{t}", type="primary" if st.session_state.time_val == t else "secondary", use_container_width=True):
                 st.session_state.time_val = t
                 st.rerun()
 
@@ -116,10 +126,9 @@ else:
         if st.button(T['btn_create'], type="primary", use_container_width=True):
             with st.spinner("✨..."):
                 try:
-                    txt = generate_story_text(cn, st.session_state.sel_lang, [T['skills'][0]], details, st.session_state.time_val)
+                    txt = generate_story_text(cn, st.session_state.sel_lang, skills, details, st.session_state.time_val)
                     ttl = txt.split('\n')[0].strip()
                     url = generate_image(ttl) if use_img else None
-                    
                     save_story({"user_email": st.session_state.user_email, "child_name": cn, "title": ttl, "story_text": txt, "image_url": url})
                     st.rerun()
                 except Exception as e: st.error(f"Error: {e}")
