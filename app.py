@@ -5,23 +5,27 @@ import streamlit.components.v1 as components
 import base64
 from supabase import create_client, Client
 
-# --- 1. КОНФИГУРАЦИЯ ---
+# --- 1. ПРИНУДИТЕЛЬНАЯ ОЧИСТКА И НАСТРОЙКИ ---
 st.set_page_config(page_title="NomNom Stories", page_icon="🌙", layout="wide")
 
 # Твой логотип в GitHub
 LOGO_URL = "https://raw.githubusercontent.com/SergeiBogachuk/nomnom-stories/main/logo.jpg"
 
-# --- 2. ИСПРАВЛЕННЫЙ ДИЗАЙН ---
+# Мы используем unsafe_allow_html=True только один раз в самом начале
 st.markdown(f"""
     <head>
         <link rel="apple-touch-icon" href="{LOGO_URL}">
         <link rel="icon" sizes="192x192" href="{LOGO_URL}">
     </head>
     <style>
+    /* Прячем все лишнее */
+    #MainMenu {{visibility: hidden;}}
+    footer {{visibility: hidden;}}
+    
     .stApp {{ background: #0a0f1e; color: #f8fafc; }}
     [data-testid="stSidebar"] {{ background-color: #111827 !important; border-right: 2px solid #38bdf8; }}
     
-    /* Кнопки выбора (Время и Темы) */
+    /* Кнопки выбора */
     div.stButton > button {{
         height: 60px !important;
         border-radius: 12px !important;
@@ -29,7 +33,7 @@ st.markdown(f"""
         background-color: #1e293b !important;
     }}
 
-    /* ПРИНУДИТЕЛЬНО БЕЛЫЙ И ЖИРНЫЙ ТЕКСТ */
+    /* Текст на кнопках */
     div.stButton > button p {{
         color: #FFFFFF !important; 
         font-weight: 800 !important;
@@ -41,19 +45,11 @@ st.markdown(f"""
         background: linear-gradient(135deg, #38bdf8 0%, #1e40af 100%) !important;
     }}
 
-    /* Поле текста сказки */
-    .story-output {{ 
-        background: #ffffff; 
-        color: #1e293b !important; 
-        padding: 40px; 
-        border-radius: 30px; 
-        font-size: 1.25em; 
-        line-height: 1.8; 
-    }}
+    .story-output {{ background: #ffffff; color: #1e293b !important; padding: 40px; border-radius: 30px; font-size: 1.25em; line-height: 1.8; }}
     </style>
     """, unsafe_allow_html=True)
 
-# --- 3. ПОДКЛЮЧЕНИЕ К БАЗЕ ---
+# --- 2. ПОДКЛЮЧЕНИЕ К БАЗЕ ---
 URL = "https://gdyhmeshafpdttzjpxjg.supabase.co"
 KEY = "sb_publishable_aqJsR96WyEdflsb4LoQSzg_g2WEyWBd"
 
@@ -63,7 +59,7 @@ except:
     st.error("Ошибка базы данных")
     st.stop()
 
-# --- 4. ФУНКЦИИ ---
+# --- 3. ФУНКЦИИ ---
 def get_audio_js(vol):
     try:
         with open("bg_music.mp3", "rb") as f:
@@ -77,27 +73,27 @@ def get_audio_js(vol):
             """
     except: return ""
 
-# --- 5. АВТОРИЗАЦИЯ ---
+# --- 4. АВТОРИЗАЦИЯ ---
 if not st.session_state.get("logged_in", False):
     st.title("🌟 NomNom Stories")
     t1, t2 = st.tabs(["Вход", "Регистрация"])
     with t1:
-        e = st.text_input("Email", key="l_email")
-        p = st.text_input("Пароль", type="password", key="l_pass")
+        e = st.text_input("Email", key="login_email")
+        p = st.text_input("Пароль", type="password", key="login_pass")
         if st.button("Войти", type="primary", use_container_width=True):
             res = supabase.table("users").select("*").eq("email", e).eq("password", p).execute()
             if res.data:
                 st.session_state.logged_in, st.session_state.user_email = True, e
                 st.rerun()
     with t2:
-        ne = st.text_input("Новый Email", key="r_email")
-        np = st.text_input("Пароль", type="password", key="r_pass")
+        ne = st.text_input("Новый Email", key="reg_email")
+        np = st.text_input("Пароль", type="password", key="reg_pass")
         if st.button("Создать аккаунт", use_container_width=True):
             supabase.table("users").insert({"email": ne, "password": np}).execute()
             st.session_state.logged_in, st.session_state.user_email = True, ne
             st.rerun()
 else:
-    # --- ОСНОВНОЙ ИНТЕРФЕЙС ---
+    # --- ГЛАВНЫЙ ИНТЕРФЕЙС ---
     client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
     ELEVEN_KEY = st.secrets["ELEVENLABS_API_KEY"]
     
@@ -122,8 +118,6 @@ else:
                     if col_del.button("🗑️", key=f"del_{s['id']}"):
                         supabase.table("stories").delete().eq("id", s['id']).execute()
                         st.rerun()
-            else:
-                st.info("Пока нет сказок")
 
         st.divider()
         VOICES = {"Марина": "ymDCYd8puC7gYjxIamPt", "Николай": "8JVbfL6oEdmuxKn5DK2C"}
@@ -181,7 +175,7 @@ else:
             with st.spinner("Волшебство начинается..."):
                 try:
                     theme = themes[st.session_state.theme_idx]
-                    prompt = f"Напиши сказку для {c_name} на тему {theme}. Сюжет: {details}. Длительность: {st.session_state.time_val} мин. В ПЕРВОЙ строке напиши короткое красивое НАЗВАНИЕ."
+                    prompt = f"Напиши сказку для {c_name} на тему {theme}. Сюжет: {details}. Длительность: {st.session_state.time_val} мин. В ПЕРВОЙ строке напиши КРАСИВОЕ НАЗВАНИЕ."
                     ch = client.chat.completions.create(model="gpt-4o", messages=[{"role": "user", "content": prompt}])
                     full_resp = ch.choices[0].message.content.split('\n')
                     gen_title = full_resp[0].strip().replace('#', '').replace('*', '')
