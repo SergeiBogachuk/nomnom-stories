@@ -1,10 +1,9 @@
 import streamlit as st
 from openai import OpenAI
 
-# 1. Настройка страницы
 st.set_page_config(page_title="NomNom Stories", page_icon="🌙", layout="centered")
 
-# --- СТИЛИЗАЦИЯ ---
+# --- ДИЗАЙН ---
 st.markdown("""
     <style>
     .stApp { background: #0f172a; color: #f8fafc; }
@@ -12,8 +11,7 @@ st.markdown("""
         background: linear-gradient(135deg, #38bdf8 0%, #818cf8 100%) !important;
         box-shadow: 0 0 20px rgba(56, 189, 248, 0.5);
     }
-    .story-output { background: #fdfbf7; color: #1e293b; padding: 35px; border-radius: 25px; font-size: 1.2em; margin-top: 20px; white-space: pre-wrap; line-height: 1.6; }
-    .moral-box { background: #e0f2fe; border-left: 5px solid #0ea5e9; padding: 20px; border-radius: 10px; color: #0369a1; margin-top: 20px; font-style: italic; }
+    .story-output { background: #fdfbf7; color: #1e293b; padding: 35px; border-radius: 25px; font-size: 1.3em; margin-top: 20px; white-space: pre-wrap; line-height: 1.7; }
     </style>
     """, unsafe_allow_html=True)
 
@@ -25,35 +23,31 @@ client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
 translations = {
     "Русский": {
         "title": "🌟 NomNom Stories",
-        "subtitle": "Сказкотерапия: мягко решаем детские капризы",
-        "settings": "👶 Профиль ребенка",
+        "subtitle": "Умные терапевтические сказки для сна",
+        "settings": "👶 Настройки",
         "name_label": "Имя",
         "voice_label": "🎙️ Голос",
         "length_label": "⏳ Длительность",
         "lengths": ["3 мин", "10 мин", "20 мин"],
-        "theme_header": "🎯 Что сегодня беспокоит?",
+        "theme_header": "🎯 Тема сказки",
         "themes": ["🛡️ Храбрость", "🍎 Привычки", "🤝 Отношения"],
-        "details_label": "✍️ Опишите ситуацию (для психолога):",
-        "details_ph": "Например: Ребенок боится идти к стоматологу...",
-        "btn_main": "✨ СОЗДАТЬ ТЕРАПЕВТИЧЕСКУЮ СКАЗКУ ✨",
-        "proc": "Мастерю поучительную историю... Пожалуйста, подождите.",
-        "moral_title": "💡 Смысл этой сказки:",
+        "details_label": "✍️ Опишите ситуацию (что важно проговорить?):",
+        "btn_main": "✨ СОЗДАТЬ ДЛИННУЮ СКАЗКУ ✨",
+        "proc": "Генерируем большую историю и аудио... Это займет время (до 2 мин).",
     },
     "English": {
         "title": "🌟 NomNom Stories",
-        "subtitle": "Fairy Tale Therapy: solving tantrums gently",
-        "settings": "👶 Child Profile",
+        "subtitle": "Smart therapeutic bedtime stories",
+        "settings": "👶 Settings",
         "name_label": "Name",
         "voice_label": "🎙️ Voice",
         "length_label": "⏳ Duration",
         "lengths": ["3 min", "10 min", "20 min"],
-        "theme_header": "🎯 Today's focus?",
+        "theme_header": "🎯 Theme",
         "themes": ["🛡️ Bravery", "🍎 Habits", "🤝 Relations"],
-        "details_label": "✍️ Describe situation (for psychology focus):",
-        "details_ph": "Example: Child is afraid of the dentist...",
-        "btn_main": "✨ CREATE THERAPEUTIC STORY ✨",
-        "proc": "Crafting a meaningful story... Please wait.",
-        "moral_title": "💡 The lesson of this story:",
+        "details_label": "✍️ Describe situation (core lesson):",
+        "btn_main": "✨ CREATE LONG STORY ✨",
+        "proc": "Generating long story and audio... Please wait (up to 2 min).",
     }
 }
 
@@ -82,58 +76,72 @@ for i in range(3):
             st.session_state.theme_idx = i
             st.rerun()
 
-details = st.text_area(t["details_label"], placeholder=t["details_ph"])
+details = st.text_area(t["details_label"], placeholder="Например: Почему важно делиться игрушками...")
 
 if st.button(t['btn_main'], type="primary", use_container_width=True):
+    progress_bar = st.progress(0)
+    status_text = st.empty()
+    
     with st.spinner(t['proc']):
         try:
             curr_theme = t['themes'][st.session_state.theme_idx]
             
-            # --- ПСИХОЛОГИЧЕСКИЙ ПРОМПТ ---
-            system_role = "Ты — детский психолог и сказочник. Твоя цель — написать терапевтическую сказку."
-            
-            len_instr = "Напиши огромную историю (минимум 2000 слов). Раздели на 4 главы." if story_len == t["lengths"][2] else "Напиши подробную историю."
-            
-            psych_instr = f"""
-            Используй психологические приемы:
-            1. В начале сказки герой сталкивается с проблемой: {details}.
-            2. Опиши чувства героя (страх, обида, неуверенность).
-            3. Герой проходит путь и находит способ справиться.
-            4. ВАЖНО: В самом конце, после текста сказки, напиши заголовок 'ИТОГ' и кратко в 3-4 предложениях сформулируй психологический смысл: чему научилась {name} и как это применять в жизни.
-            """
+            # --- ЛОГИКА АВТОМАТИЧЕСКОЙ СБОРКИ ДЛИННОЙ СКАЗКИ ---
+            if story_len == t["lengths"][0]: # 3 минуты
+                parts = 1
+                prompt_style = "Напиши подробную сказку."
+            elif story_len == t["lengths"][1]: # 10 минут
+                parts = 2
+                prompt_style = "Напиши огромную сказку. Это только ПЕРВАЯ ЧАСТЬ длинного повествования."
+            else: # 20 минут
+                parts = 3
+                prompt_style = "Напиши эпическую сказку. Это только НАЧАЛО огромной истории (Часть 1)."
 
-            full_prompt = f"{len_instr} {psych_instr} Ребенок: {name}. Тема: {curr_theme}. Язык: {lang}."
+            full_story = ""
             
-            res = client.chat.completions.create(
+            # Цикл генерации глав
+            for p in range(parts):
+                status_text.text(f"Создаем главу {p+1}...")
+                
+                # Контекст для продолжения
+                context = f"Продолжай историю для {name}. Мы уже написали: {full_story[-500:]}" if p > 0 else ""
+                
+                res = client.chat.completions.create(
+                    model="gpt-4o",
+                    messages=[{
+                        "role": "user", 
+                        "content": f"{prompt_style} {context} Тема: {curr_theme}. Ситуация: {details}. Язык: {lang}. Стиль Pixar."
+                    }]
+                )
+                full_story += res.choices[0].message.content + "\n\n"
+                progress_bar.progress((p + 1) / (parts + 1))
+
+            # --- ДОБАВЛЯЕМ АНАЛИЗ В КОНЦЕ ---
+            status_text.text("Добавляем психологический разбор...")
+            analysis_prompt = f"Напиши финальный абзац для сказки. Обратись к ребенку по имени {name}. Ласково объясни психологический смысл сказки (почему герой поступил так, что это дало) и подведи итог ситуации {details}. Это должно звучать как мудрое завершение сказки."
+            
+            analysis_res = client.chat.completions.create(
                 model="gpt-4o",
-                messages=[
-                    {"role": "system", "content": system_role},
-                    {"role": "user", "content": full_prompt}
-                ]
+                messages=[{"role": "user", "content": analysis_prompt}]
             )
-            raw_content = res.choices[0].message.content
+            full_story += "\n\n--- МУДРЫЙ ИТОГ ---\n\n" + analysis_res.choices[0].message.content
             
-            # Разделяем сказку и итог
-            if "ИТОГ" in raw_content:
-                story_text, moral = raw_content.split("ИТОГ", 1)
-            else:
-                story_text, moral = raw_content, ""
-
-            img_res = client.images.generate(model="dall-e-3", prompt=f"Pixar calm illustration: {curr_theme}, soft lighting, child {name}.")
+            # Картинка
+            img_res = client.images.generate(model="dall-e-3", prompt=f"Cozy Pixar style bedtime illustration: {curr_theme}, {name}.")
             
-            # Озвучка (берем первые 4000 символов — это лимит)
-            audio_res = client.audio.speech.create(model="tts-1", voice=voice, input=story_text[:4000])
+            # Озвучка (OpenAI имеет лимит 4096 символов на один аудиофайл)
+            # Если текст очень длинный, берем основной объем для озвучки
+            status_text.text("Превращаем текст в голос...")
+            audio_res = client.audio.speech.create(model="tts-1", voice=voice, input=full_story[:4090])
 
+            # Финальный вывод
             st.image(img_res.data[0].url, use_container_width=True)
             st.audio(audio_res.content)
+            st.markdown(f'<div class="story-output">{full_story}</div>', unsafe_allow_html=True)
             
-            # Вывод сказки
-            st.markdown(f'<div class="story-output">{story_text}</div>', unsafe_allow_html=True)
-            
-            # Вывод итога (в отдельной рамке)
-            if moral:
-                st.markdown(f'<div class="moral-box"><b>{t["moral_title"]}</b><br>{moral}</div>', unsafe_allow_html=True)
-            
+            progress_bar.progress(100)
+            status_text.text("Готово!")
             st.balloons()
+
         except Exception as e:
             st.error(f"Error: {e}")
