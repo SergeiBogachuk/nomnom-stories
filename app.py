@@ -25,7 +25,7 @@ ELEVEN_KEY = st.secrets["ELEVENLABS_API_KEY"]
 def generate_premium_audio(text):
     # ПРОВЕРЬ ЭТОТ ID! Это голос Alice. 
     # Если ты выбрал другой в ElevenLabs, замени эти буквы на свои:
-    VOICE_ID = "Xb7hHqWq9V7pE3E9Epxu" 
+    VOICE_ID = "ymDCYd8puC7gYjxIamPt" 
     
     url = f"https://api.elevenlabs.io/v1/text-to-speech/{VOICE_ID}"
     headers = {
