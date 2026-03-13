@@ -17,33 +17,35 @@ except:
     st.error("Ошибка базы данных")
     st.stop()
 
-# --- 2. СТИЛЬ (ИСПРАВЛЕННЫЕ КНОПКИ) ---
+# --- 2. СТИЛЬ (УЛУЧШЕННЫЙ ДИЗАЙН) ---
 st.markdown("""
     <style>
     .stApp { background: #0a0f1e; color: #f8fafc; }
     [data-testid="stSidebar"] { background-color: #111827 !important; border-right: 2px solid #38bdf8; }
     
-    /* Исправляем кнопки тем */
+    /* Стиль для всех кнопок-карточек */
     div.stButton > button { 
-        height: 70px !important; 
-        border-radius: 15px !important; 
+        height: 60px !important; 
+        border-radius: 12px !important; 
         font-weight: bold !important;
-        color: white !important; /* Текст всегда белый */
-        border: 1px solid #38bdf8 !important;
+        font-size: 16px !important;
+        transition: 0.3s;
     }
     
-    /* Цвет активной кнопки */
-    div.stButton > button[kind="primary"] {
-        background: #ef4444 !important; /* Красный как на скрине */
-    }
-    
-    /* Цвет неактивной кнопки */
-    div.stButton > button[kind="secondary"] {
-        background: #1e293b !important;
-        color: #94a3b8 !important;
-    }
+    /* Текст внутри кнопок выбора */
+    div.stButton > button p { color: white !important; }
 
-    .story-output { background: #ffffff; color: #1e293b !important; padding: 40px; border-radius: 30px; font-size: 1.25em; line-height: 1.7; }
+    /* Результат сказки */
+    .story-output { 
+        background: #ffffff; 
+        color: #1e293b !important; 
+        padding: 40px; 
+        border-radius: 30px; 
+        font-size: 1.25em; 
+        line-height: 1.8; 
+    }
+    
+    .label-text { font-size: 1.1em; font-weight: bold; margin-bottom: 10px; color: #38bdf8; }
     </style>
     """, unsafe_allow_html=True)
 
@@ -53,7 +55,7 @@ def login_user(email):
     st.session_state["user_email"] = email
     st.rerun()
 
-# --- 4. СТРАНИЦА ВХОДА ---
+# --- 4. ЛОГИКА ВХОДА ---
 if not st.session_state.get("logged_in", False):
     st.title("🌟 NomNom Stories")
     tab1, tab2 = st.tabs(["Вход", "Регистрация"])
@@ -73,10 +75,13 @@ if not st.session_state.get("logged_in", False):
                 login_user(n_email)
             except: st.error("Email занят")
 else:
-    # ГЛАВНЫЙ ЭКРАН
+    # --- ГЛАВНЫЙ ИНТЕРФЕЙС ---
     client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
     ELEVEN_KEY = st.secrets["ELEVENLABS_API_KEY"]
+    
+    # Инициализация состояний выбора
     if 'theme_idx' not in st.session_state: st.session_state.theme_idx = 0
+    if 'time_val' not in st.session_state: st.session_state.time_val = 5
 
     with st.sidebar:
         st.success(f"Привет, {st.session_state['user_email']}")
@@ -84,43 +89,56 @@ else:
         selected_voice = st.selectbox("Голос", list(VOICES.keys()))
         music_vol = st.slider("Громкость музыки", 0.0, 1.0, 0.2)
         if st.button("Выйти"):
-            st.session_state["logged_in"] = False
+            st.session_state.clear()
             st.rerun()
 
     st.title("✨ Создай Сказку")
-    child_name = st.text_input("Имя ребенка", value="Даша")
-    lang = st.selectbox("Язык", ["Русский", "English"])
     
-    st.divider()
+    col_n, col_l = st.columns(2)
+    with col_n: child_name = st.text_input("👤 Имя ребенка", value="Даша")
+    with col_l: lang = st.selectbox("🌍 Язык", ["Русский", "English"])
+    
+    # --- НОВЫЙ ВЫБОР ВРЕМЕНИ (Вместо ползунка) ---
+    st.markdown('<p class="label-text">⏳ Длительность сказки</p>', unsafe_allow_html=True)
+    time_options = [3, 5, 10]
+    t_cols = st.columns(len(time_options))
+    for idx, t in enumerate(time_options):
+        with t_cols[idx]:
+            is_active = "primary" if st.session_state.time_val == t else "secondary"
+            if st.button(f"{t} мин", key=f"time_{t}", type=is_active, use_container_width=True):
+                st.session_state.time_val = t
+                st.rerun()
+
+    # --- ВЫБОР ТЕМЫ ---
+    st.markdown('<p class="label-text">🛡️ Тема воспитания</p>', unsafe_allow_html=True)
     themes = ["🛡️ Храбрость", "🍎 Привычки", "🤝 Отношения"]
-    cols = st.columns(3)
+    th_cols = st.columns(3)
     for i in range(3):
-        with cols[i]:
-            t_type = "primary" if st.session_state.theme_idx == i else "secondary"
-            if st.button(themes[i], key=f"t_{i}", type=t_type, use_container_width=True):
+        with th_cols[i]:
+            is_active = "primary" if st.session_state.theme_idx == i else "secondary"
+            if st.button(themes[i], key=f"theme_{i}", type=is_active, use_container_width=True):
                 st.session_state.theme_idx = i
                 st.rerun()
 
-    details = st.text_area("✍️ О чем сегодня сказка?")
+    details = st.text_area("✍️ О чем сегодня сказка?", placeholder="Например: Как Даша пошла в зоопарк и перестала бояться тигров...")
 
     if st.button("🚀 СОЗДАТЬ МАГИЮ ✨", type="primary", use_container_width=True):
-        with st.spinner("Сочиняем и сохраняем в базу..."):
+        with st.spinner("Сочиняем и сохраняем..."):
             try:
                 curr_theme = themes[st.session_state.theme_idx]
+                curr_time = st.session_state.time_val
                 
                 # Картинка
-                img_res = client.images.generate(model="dall-e-3", prompt=f"Pixar style, {curr_theme}, child {child_name}.")
+                img_res = client.images.generate(model="dall-e-3", prompt=f"Pixar style story illustration, {curr_theme}, child {child_name}.")
                 img_url = img_res.data[0].url
                 st.image(img_url, use_container_width=True)
 
                 # Текст
-                ch_res = client.chat.completions.create(
-                    model="gpt-4o",
-                    messages=[{"role": "user", "content": f"Напиши сказку для {child_name} на тему {curr_theme}. Сюжет: {details}. Язык: {lang}."}]
-                )
+                prompt = f"Напиши сказку на {curr_time} минут чтения для {child_name} на тему {curr_theme}. Сюжет: {details}. Язык: {lang}."
+                ch_res = client.chat.completions.create(model="gpt-4o", messages=[{"role": "user", "content": prompt}])
                 story_text = ch_res.choices[0].message.content
 
-                # --- СОХРАНЕНИЕ В БАЗУ (НОВОЕ!) ---
+                # Сохранение в базу
                 supabase.table("stories").insert({
                     "user_email": st.session_state["user_email"],
                     "child_name": child_name,
@@ -139,7 +157,7 @@ else:
                     st.audio(aud_res.content, format="audio/mp3")
 
                 st.markdown(f'<div class="story-output">{story_text}</div>', unsafe_allow_html=True)
-                st.success("✅ Сказка сохранена в твою личную библиотеку!")
+                st.success("✅ Сказка сохранена в библиотеку!")
                 
             except Exception as e:
                 st.error(f"Ошибка: {e}")
