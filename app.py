@@ -18,11 +18,20 @@ st.markdown("""
         box-shadow: 0 0 20px rgba(56, 189, 248, 0.4) !important; border: none !important;
     }
     .story-output { background: #fdfbf7; color: #1e293b; padding: 35px; border-radius: 25px; font-size: 1.2em; margin-top: 20px; white-space: pre-wrap; line-height: 1.6; }
+    .music-box { background: #1e293b; padding: 15px; border-radius: 15px; border: 1px solid #38bdf8; margin-bottom: 20px; }
     </style>
     """, unsafe_allow_html=True)
 
 client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
 ELEVEN_KEY = st.secrets["ELEVENLABS_API_KEY"]
+
+# Прямые ссылки на приятную фоновую музыку (без авторских прав)
+MUSIC_URLS = {
+    "Без музыки": None,
+    "🌙 Колыбельная (Пианино)": "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3", # Пример ссылки
+    "🌲 Звуки леса": "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3",
+    "🌧️ Легкий дождь": "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3"
+}
 
 def generate_premium_audio(text):
     VOICE_ID = "ymDCYd8puC7gYjxIamPt" # Марина
@@ -41,6 +50,11 @@ if 'theme_idx' not in st.session_state: st.session_state.theme_idx = 0
 
 st.title("🌟 NomNom Stories")
 
+with st.sidebar:
+    st.header("⚙️ Настройки атмосферы")
+    bg_music = st.selectbox("Фоновая музыка", list(MUSIC_URLS.keys()))
+    music_volume = st.slider("Громкость музыки", 0.0, 1.0, 0.2)
+
 col1, col2 = st.columns(2)
 with col1: name = st.text_input("Имя ребенка", value="Даша")
 with col2: lang = st.selectbox("Язык", ["Русский", "English"])
@@ -58,59 +72,55 @@ for i in range(3):
 
 details = st.text_area("✍️ Опиши ситуацию:")
 
-if st.button("✨ СОЗДАТЬ БОЛЬШУЮ СКАЗКУ ✨", type="primary", use_container_width=True):
+if st.button("✨ СОЗДАТЬ МАГИЧЕСКУЮ СКАЗКУ ✨", type="primary", use_container_width=True):
     num_chapters = max(1, story_minutes // 3)
     progress_bar = st.progress(0)
     
-    with st.spinner(f"Марина готовит сказку на {story_minutes} минут..."):
+    with st.spinner(f"Марина и музыканты готовят сказку..."):
         try:
             curr_theme = themes[st.session_state.theme_idx]
-            
-            # 1. План
-            plan_res = client.chat.completions.create(
-                model="gpt-4o", 
-                messages=[{"role": "user", "content": f"План длинной сказки из {num_chapters} глав для {name}. Тема: {curr_theme}. Ситуация: {details}. Язык: {lang}."}]
-            )
+            plan_res = client.chat.completions.create(model="gpt-4o", messages=[{"role": "user", "content": f"План сказки из {num_chapters} глав для {name}. Тема: {curr_theme}. Ситуация: {details}. Язык: {lang}."}])
             plan = plan_res.choices[0].message.content
             
             full_story = ""
             
             # Картинка
-            img_res = client.images.generate(model="dall-e-3", prompt=f"Cozy bedtime story: {curr_theme}, child {name}.")
+            img_res = client.images.generate(model="dall-e-3", prompt=f"Cozy bedtime story illustration: {curr_theme}, child {name}, soft light.")
             st.image(img_res.data[0].url, use_container_width=True)
 
-            st.subheader("🎙️ Главы сказки (играют одна за другой):")
+            # Фоновая музыка (если выбрана)
+            if MUSIC_URLS[bg_music]:
+                st.markdown(f'<div class="music-box">🎵 Фоновое сопровождение: {bg_music}</div>', unsafe_allow_html=True)
+                st.audio(MUSIC_URLS[bg_music], format="audio/mp3", loop=True)
+
+            st.subheader("🎙️ Главы сказки (играют по очереди):")
             
-            # 2. Поочередная генерация глав и вывод аудио
             for i in range(num_chapters):
-                ch_res = client.chat.completions.create(
-                    model="gpt-4o", 
-                    messages=[{"role": "user", "content": f"Напиши главу №{i+1} для {name} по плану: {plan}. Пиши МАКСИМАЛЬНО МНОГО текста. Прошлое: {full_story[-500:]}"}]
-                )
+                ch_res = client.chat.completions.create(model="gpt-4o", messages=[{"role": "user", "content": f"Напиши главу №{i+1} для {name} по плану: {plan}. ОЧЕНЬ ПОДРОБНО. Прошлое: {full_story[-500:]}"}])
                 chapter_text = ch_res.choices[0].message.content
                 full_story += f"\n\n### Глава {i+1}\n" + chapter_text
                 
                 audio_bytes = generate_premium_audio(chapter_text)
                 if audio_bytes:
-                    # Выводим плеер с уникальным ID для каждой главы
                     st.write(f"**Глава {i+1}**")
                     st.audio(audio_bytes, format="audio/mp3")
+                    # Кнопка скачать для каждой главы
+                    st.download_button(label=f"💾 Скачать Главу {i+1}", data=audio_bytes, file_name=f"story_{name}_chapter_{i+1}.mp3", mime="audio/mp3")
                 
                 progress_bar.progress((i + 1) / num_chapters)
 
-            # --- МАГИЯ АВТО-ПЕРЕКЛЮЧЕНИЯ (JavaScript) ---
-            # Этот скрипт находит все аудио-плееры на странице и заставляет их играть по очереди
-            components.html("""
+            # JavaScript для авто-перехода
+            components.html(f"""
                 <script>
-                const playNext = () => {
+                const playNext = () => {{
                     const audios = window.parent.document.querySelectorAll('audio');
-                    for (let i = 0; i < audios.length - 1; i++) {
-                        audios[i].onended = () => {
+                    // Индекс 0 - это музыка, начинаем со 1
+                    for (let i = 1; i < audios.length - 1; i++) {{
+                        audios[i].onended = () => {{
                             audios[i+1].play();
-                        };
-                    }
-                };
-                // Запускаем проверку каждые 2 секунды, пока плееры подгружаются
+                        }};
+                    }}
+                }};
                 setInterval(playNext, 2000);
                 </script>
             """, height=0)
