@@ -8,7 +8,7 @@ from supabase import create_client, Client
 # --- 1. CONFIG ---
 st.set_page_config(page_title="NomNom Stories", page_icon="🌙", layout="wide")
 
-# --- 2. TRANSLATIONS (ПОЛНЫЙ СПИСОК КЛЮЧЕЙ) ---
+# --- 2. TRANSLATIONS ---
 lang_dict = {
     "Русский": {
         "title": "✨ NomNom Stories (GPT-5.3 PRO)",
@@ -63,7 +63,13 @@ def get_bg_music_html():
     try:
         with open("bg_music.mp3", "rb") as f:
             data = base64.b64encode(f.read()).decode()
-            return f'<audio autoplay loop id="bg_music"><source src="data:audio/mp3;base64,{data}" type="audio/mp3"></audio><script>document.getElementById("bg_music").volume = 0.1;</script>'
+            return f'''
+            <audio autoplay loop id="bg_music"><source src="data:audio/mp3;base64,{data}" type="audio/mp3"></audio>
+            <script>
+                var audio = window.parent.document.getElementById("bg_music");
+                if (audio) {{ audio.volume = 0.15; audio.play(); }}
+            </script>
+            '''
     except: return ""
 
 def get_speech(text, voice_id, api_key):
@@ -75,7 +81,7 @@ def get_speech(text, voice_id, api_key):
 # --- 4. MAIN ---
 if not st.session_state.get("logged_in", False):
     st.title("🌟 NomNom Stories")
-    e, p = st.text_input("Email", key="auth_email"), st.text_input("Pass", type="password", key="auth_pass")
+    e, p = st.text_input("Email", key="ae"), st.text_input("Pass", type="password", key="ap")
     if st.button("Войти", type="primary", use_container_width=True):
         res = supabase.table("users").select("*").eq("email", e).eq("password", p).execute()
         if res.data:
@@ -108,23 +114,32 @@ else:
             st.session_state.view_story = None
             st.rerun()
 
+    # --- ОТОБРАЖЕНИЕ РЕЗУЛЬТАТА ---
     if st.session_state.view_story:
         s = st.session_state.view_story
         st.title(f"📖 {s.get('title', 'Story')}")
         
+        # МУЗЫКА ТЕПЕРЬ ТУТ (ВЫШЕ ВСЕХ РЕЖИМОВ)
+        components.html(get_bg_music_html(), height=0)
+        
         if st.session_state.mode_audio:
+            # РЕЖИМ ТОЛЬКО АУДИО
             with st.spinner("🔊..."):
                 audio_data = get_speech(s['story_text'], selected_voice_id, ELEVEN_KEY)
                 if audio_data: st.audio(audio_data)
         else:
+            # РЕЖИМ ТЕКСТ + КАРТИНКА
             if s.get('image_url'): st.image(s['image_url'], use_container_width=True)
-            components.html(get_bg_music_html(), height=0)
+            if st.button("🔊 Прочитать вслух"):
+                with st.spinner("..."):
+                    audio_data = get_speech(s['story_text'], selected_voice_id, ELEVEN_KEY)
+                    if audio_data: st.audio(audio_data)
             st.markdown(f'<div class="story-output">{s["story_text"]}</div>', unsafe_allow_html=True)
             
     else:
+        # --- ЭКРАН СОЗДАНИЯ ---
         st.title(T['title'])
         cn = st.text_input(T['child_name'], value="Даша")
-        
         current_lang = st.selectbox("Language / Язык", ["Русский", "English"], index=0 if st.session_state.sel_lang == "Русский" else 1)
         if current_lang != st.session_state.sel_lang:
             st.session_state.sel_lang = current_lang
