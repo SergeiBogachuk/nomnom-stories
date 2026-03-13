@@ -58,8 +58,8 @@ client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
 ELEVEN_KEY = st.secrets["ELEVENLABS_API_KEY"]
 
 VOICES = {
-    "Марина (Добрая)": "ymDCYd8puC7gYjxIamPt",
-    "DAD": "8JVbfL6oEdmuxKn5DK2C"
+    "Марина ": "ymDCYd8puC7gYjxIamPt",
+    "dad ": "8JVbfL6oEdmuxKn5DK2C"
 }
 
 # Ссылки на более громкую и качественную музыку
