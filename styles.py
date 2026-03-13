@@ -5,18 +5,11 @@ def apply_styles():
         <style>
         .stApp { background: #0a0f1e; color: #f8fafc; }
         
-        /* СИЛОВОЙ МЕТОД: Показываем кнопку сайдбара, если она спрятана */
-        header[data-testid="stHeader"] {
-            background-color: rgba(0,0,0,0) !important;
-        }
-        
-        /* Та самая кнопка "Гамбургер" (три полоски) */
+        /* Кнопка сайдбара */
         button[kind="headerNoPadding"] {
             background-color: #38bdf8 !important;
             border-radius: 5px !important;
-            box-shadow: 0px 0px 15px #38bdf8 !important;
-            z-index: 999999 !important;
-            display: block !important;
+            box-shadow: 0px 0px 10px #38bdf8 !important;
         }
 
         [data-testid="stSidebar"] { 
@@ -24,14 +17,23 @@ def apply_styles():
             border-right: 2px solid #38bdf8; 
         }
 
-        /* Текст и яркость */
+        /* ЦЕНТРИРОВАНИЕ И ШИРИНА ПОЛЕЙ */
+        /* Ограничиваем ширину основного блока и ставим по центру */
+        [data-testid="stVerticalBlock"] > div:has(div.stTextInput), 
+        [data-testid="stVerticalBlock"] > div:has(div.stTextArea),
+        .stForm {
+            max-width: 600px !important;
+            margin-left: auto !important;
+            margin-right: auto !important;
+        }
+
+        /* Делаем текст ярким */
         p, label, span, .stMarkdown { 
             color: #ffffff !important; 
-            opacity: 1 !important; 
             font-weight: 600 !important;
         }
 
-        /* Кнопки и градиент */
+        /* Кнопки */
         div.stButton > button[kind="primary"], 
         button[kind="primaryFormSubmit"] {
             background: linear-gradient(135deg, #38bdf8 0%, #1e40af 100%) !important;
@@ -53,6 +55,8 @@ def apply_styles():
             border-radius: 30px; 
             font-size: 1.25em; 
             line-height: 1.8; 
+            max-width: 800px;
+            margin: auto;
         }
         </style>
         """, unsafe_allow_html=True)
