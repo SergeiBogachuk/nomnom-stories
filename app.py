@@ -5,48 +5,42 @@ import streamlit.components.v1 as components
 import base64
 from supabase import create_client, Client
 
-# --- 1. КОНФИГУРАЦИЯ ---
+# --- 1. CONFIG ---
 st.set_page_config(page_title="NomNom Stories", page_icon="🌙", layout="wide")
 
-# Ссылка на лого
-LOGO_URL = "https://raw.githubusercontent.com/SergeiBogachuk/nomnom-stories/main/logo.jpg"
+# Прямая ссылка на лого
+LOGO = "https://raw.githubusercontent.com/SergeiBogachuk/nomnom-stories/main/logo.jpg"
 
-# --- 2. ПРОСТЫЕ СТИЛИ (БЕЗ ЛИШНИХ ТЕГОВ) ---
+# --- 2. СТИЛИ И ХАК ДЛЯ ИКОНКИ ---
+# Мы добавляем иконку ПЕРЕД стилями, чтобы Safari увидел её раньше
 st.markdown(f"""
+    <link rel="apple-touch-icon" href="{LOGO}">
+    <link rel="apple-touch-icon-precomposed" href="{LOGO}">
+    <link rel="icon" type="image/jpeg" href="{LOGO}">
     <style>
     .stApp {{ background: #0a0f1e; color: #f8fafc; }}
     [data-testid="stSidebar"] {{ background-color: #111827 !important; border-right: 2px solid #38bdf8; }}
-    
-    /* Кнопки */
     div.stButton > button {{
-        height: 55px !important;
+        height: 60px !important;
         border-radius: 12px !important;
         border: 2px solid #38bdf8 !important;
         background-color: #1e293b !important;
     }}
-
-    /* Белый текст */
     div.stButton > button p {{
         color: #FFFFFF !important; 
         font-weight: 800 !important;
-        font-size: 15px !important;
+        font-size: 16px !important;
     }}
-
     div.stButton > button[kind="primary"] {{
         background: linear-gradient(135deg, #38bdf8 0%, #1e40af 100%) !important;
     }}
-
     .story-output {{ background: #ffffff; color: #1e293b !important; padding: 40px; border-radius: 30px; font-size: 1.25em; line-height: 1.8; }}
-    
-    /* Скрываем мусор */
     #MainMenu {{visibility: hidden;}}
     footer {{visibility: hidden;}}
     </style>
-    
-    <link rel="apple-touch-icon" href="{LOGO_URL}">
     """, unsafe_allow_html=True)
 
-# --- 3. ПОДКЛЮЧЕНИЕ К БАЗЕ ---
+# --- 3. DATABASE ---
 URL = "https://gdyhmeshafpdttzjpxjg.supabase.co"
 KEY = "sb_publishable_aqJsR96WyEdflsb4LoQSzg_g2WEyWBd"
 
@@ -56,7 +50,7 @@ except:
     st.error("Ошибка базы данных")
     st.stop()
 
-# --- 4. ФУНКЦИИ ---
+# --- 4. FUNCTIONS ---
 def get_audio_js(vol):
     try:
         with open("bg_music.mp3", "rb") as f:
@@ -70,7 +64,7 @@ def get_audio_js(vol):
             """
     except: return ""
 
-# --- 5. АВТОРИЗАЦИЯ ---
+# --- 5. AUTH ---
 if not st.session_state.get("logged_in", False):
     st.title("🌟 NomNom Stories")
     t1, t2 = st.tabs(["Вход", "Регистрация"])
@@ -90,7 +84,7 @@ if not st.session_state.get("logged_in", False):
             st.session_state.logged_in, st.session_state.user_email = True, ne
             st.rerun()
 else:
-    # --- ГЛАВНЫЙ ИНТЕРФЕЙС ---
+    # --- MAIN UI ---
     client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
     ELEVEN_KEY = st.secrets["ELEVENLABS_API_KEY"]
     
@@ -101,7 +95,6 @@ else:
 
     with st.sidebar:
         st.success(f"Аккаунт: {st.session_state.user_email}")
-        
         with st.expander("📚 Мои сказки"):
             stories = supabase.table("stories").select("*").eq("user_email", st.session_state.user_email).order("created_at", desc=True).execute()
             if stories.data:
@@ -165,7 +158,7 @@ else:
                 st.session_state.theme_idx = i
                 st.rerun()
 
-        details = st.text_area("✍️ Краткий сюжет")
+        details = st.text_area("✍️ О чем будет сказка?")
 
         if st.button("🚀 СОЗДАТЬ МАГИЮ ✨", type="primary", use_container_width=True):
             with st.spinner("Создаем..."):
