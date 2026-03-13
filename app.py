@@ -2,18 +2,27 @@ import streamlit as st
 from openai import OpenAI
 import requests
 import streamlit.components.v1 as components
+import base64
 
 st.set_page_config(page_title="NomNom Stories", page_icon="🌙", layout="wide")
 
-# --- СТИЛЬ ---
+# Функция, чтобы приложение "увидело" музыку в твоем GitHub
+def get_audio_html(file_path):
+    try:
+        with open(file_path, "rb") as f:
+            data = f.read()
+            b64 = base64.b64encode(data).decode()
+            return f'<audio id="bg_music" loop><source src="data:audio/mp3;base64,{b64}" type="audio/mp3"></audio>'
+    except:
+        return ""
+
+# --- СТИЛЬ ПРИЛОЖЕНИЯ ---
 st.markdown("""
     <style>
     .stApp { background: #0a0f1e; color: #f8fafc; }
     [data-testid="stSidebar"] { background-color: #111827 !important; border-right: 2px solid #38bdf8; }
-    div.stButton > button { height: 60px !important; border-radius: 12px !important; }
-    /* Прячем плеер фоновой музыки, чтобы не путать пользователя */
-    .hidden-audio { display: none; }
-    .story-output { background: #ffffff; color: #1e293b; padding: 40px; border-radius: 30px; font-size: 1.25em; line-height: 1.7; box-shadow: 0 10px 40px rgba(0,0,0,0.6); }
+    div.stButton > button { height: 65px !important; border-radius: 12px !important; }
+    .story-output { background: #ffffff; color: #1e293b; padding: 40px; border-radius: 30px; font-size: 1.2em; line-height: 1.7; box-shadow: 0 10px 40px rgba(0,0,0,0.6); }
     </style>
     """, unsafe_allow_html=True)
 
@@ -25,24 +34,19 @@ VOICES = {
     "Николай (Мужской)": "8JVbfL6oEdmuxKn5DK2C"
 }
 
-# ОДНА КЛАССИЧЕСКАЯ МЕЛОДИЯ (Спокойное пианино)
-CLASSIC_MUSIC = "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-8.mp3"
-
 def generate_premium_audio(text, voice_id):
     url = f"https://api.elevenlabs.io/v1/text-to-speech/{voice_id}"
     headers = {"xi-api-key": ELEVEN_KEY, "Content-Type": "application/json"}
     data = {"text": text, "model_id": "eleven_multilingual_v2", "voice_settings": {"stability": 0.6, "similarity_boost": 0.8}}
-    try:
-        res = requests.post(url, json=data, headers=headers)
-        return res.content if res.status_code == 200 else None
-    except: return None
+    res = requests.post(url, json=data, headers=headers)
+    return res.content if res.status_code == 200 else None
 
 # --- ИНТЕРФЕЙС ---
 if 'theme_idx' not in st.session_state: st.session_state.theme_idx = 0
 
 with st.sidebar:
     st.header("Настройки")
-    selected_voice = st.selectbox("Голос", list(VOICES.keys()))
+    selected_voice = st.selectbox("Голос рассказчика", list(VOICES.keys()))
     music_vol = st.slider("Громкость музыки", 0.0, 1.0, 0.2)
 
 st.title("🌟 NomNom Stories")
@@ -51,30 +55,32 @@ col1, col2 = st.columns(2)
 with col1: name = st.text_input("Имя ребенка", value="Даша")
 with col2: lang = st.selectbox("Язык", ["Русский", "English"])
 
-story_minutes = st.select_slider("⏳ Длительность", options=[3, 5, 10, 15, 20, 30, 45, 60], value=10)
+story_minutes = st.select_slider("⏳ Длительность", options=[3, 5, 10, 15, 20, 30], value=10)
 
 st.divider()
 themes = ["🛡️ Храбрость", "🍎 Привычки", "🤝 Отношения"]
 cols = st.columns(3)
 for i in range(3):
     with cols[i]:
-        active = "primary" if st.session_state.theme_idx == i else "secondary"
-        if st.button(themes[i], key=f"t_{i}", type=active, use_container_width=True):
+        if st.button(themes[i], key=f"t_{i}", type="primary" if st.session_state.theme_idx == i else "secondary", use_container_width=True):
             st.session_state.theme_idx = i
             st.rerun()
 
-details = st.text_area("✍️ О чем сказка сегодня?")
+details = st.text_area("✍️ О чем сказка?")
 
-if st.button("✨ СОЗДАТЬ И ВКЛЮЧИТЬ СКАЗКУ ✨", type="primary", use_container_width=True):
+if st.button("✨ СОЗДАТЬ СКАЗКУ ✨", type="primary", use_container_width=True):
     num_chapters = max(1, story_minutes // 3)
-    with st.spinner("Магия классики и слов..."):
+    with st.spinner("Создаем магию..."):
         try:
             curr_theme = themes[st.session_state.theme_idx]
+            
+            # Картинка
             img_res = client.images.generate(model="dall-e-3", prompt=f"Cozy Pixar bedtime illustration: {curr_theme}, child {name}.")
             st.image(img_res.data[0].url, use_container_width=True)
 
-            # --- СКРЫТЫЙ ПЛЕЕР МУЗЫКИ ---
-            st.markdown(f'<audio id="bg_music" src="{CLASSIC_MUSIC}" loop></audio>', unsafe_allow_html=True)
+            # Вставляем музыку из твоего GitHub (скрыто)
+            music_html = get_audio_html("bg_music.mp3")
+            st.markdown(music_html, unsafe_allow_html=True)
             
             full_story = ""
             for i in range(num_chapters):
@@ -90,28 +96,21 @@ if st.button("✨ СОЗДАТЬ И ВКЛЮЧИТЬ СКАЗКУ ✨", type="pr
                 if audio_bytes:
                     st.audio(audio_bytes, format="audio/mp3")
 
-            # --- JS: ЗАПУСКАЕМ МУЗЫКУ И ПЕРВУЮ ГЛАВУ ОДНОВРЕМЕННО ---
+            # АВТОЗАПУСК: Музыка + Первая глава
             components.html(f"""
                 <script>
                 setTimeout(() => {{
                     const music = window.parent.document.getElementById('bg_music');
-                    const chapters = window.parent.document.querySelectorAll('audio');
-                    
+                    const audios = window.parent.document.querySelectorAll('audio');
                     if (music) {{
                         music.volume = {music_vol};
                         music.play();
                     }}
-                    
-                    // Первый аудио-плеер (не считая скрытого) - это Глава 1
-                    if (chapters[1]) {{
-                        chapters[1].play();
-                        
-                        // Автопереход между главами
-                        for (let i = 1; i < chapters.length - 1; i++) {{
-                            chapters[i].onended = () => {{ chapters[i+1].play(); }};
-                        }}
+                    if (audios[0]) audios[0].play();
+                    for (let i = 0; i < audios.length - 1; i++) {{
+                        audios[i].onended = () => {{ audios[i+1].play(); }};
                     }}
-                }}, 1000);
+                }}, 1500);
                 </script>
             """, height=0)
 
