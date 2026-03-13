@@ -3,7 +3,7 @@ import streamlit as st
 def apply_styles():
     st.markdown("""
         <style>
-        /* 1. ОБЩИЙ ФОН */
+        /* --- 1. ОБЩИЙ ВИД И ФОН --- */
         .stApp {
             background: linear-gradient(rgba(10, 15, 30, 0.8), rgba(10, 15, 30, 0.8)), 
                         url("https://images.unsplash.com/photo-1419242902214-272b3f66ee7a?q=80&w=2013&auto=format&fit=crop") !important;
@@ -11,69 +11,75 @@ def apply_styles():
             background-attachment: fixed !important;
         }
 
-        /* 2. ФОРМА ВХОДА (КОМПАКТНАЯ И ПО ЦЕНТРУ) */
-        [data-testid="stForm"], .stForm {
-            background: rgba(255, 255, 255, 0.1) !important;
-            backdrop-filter: blur(15px) !important;
-            border: 1px solid rgba(56, 189, 248, 0.5) !important;
-            padding: 30px !important;
-            border-radius: 20px !important;
-            max-width: 450px !important; /* Возвращаем классную ширину */
-            margin: 50px auto !important;
-            display: block !important;
-        }
-
-        /* 3. КНОПКИ ВРЕМЕНИ (3, 5, 10 мин) - УБИРАЕМ БЕЛЫЙ ЦВЕТ */
-        div[data-testid="stHorizontalBlock"] button {
-            background-color: #1e293b !important;
-            color: #ffffff !important;
-            border: 2px solid #38bdf8 !important;
-            opacity: 1 !important;
-        }
-        
-        /* Выбранная кнопка времени */
-        div[data-testid="stHorizontalBlock"] button[kind="primary"] {
-            background: linear-gradient(135deg, #38bdf8 0%, #1e40af 100%) !important;
-            border: none !important;
-            box-shadow: 0px 0px 15px rgba(56, 189, 248, 0.5) !important;
-        }
-
-        /* 4. САЙДБАР И КОРЗИНКИ БЕЗ КВАДРАТОВ */
+        /* --- 2. САЙДБАР (ЛЕВАЯ КОЛОНКА) --- */
         [data-testid="stSidebar"] {
             background-color: #0f172a !important;
             border-right: 1px solid #38bdf8 !important;
         }
 
-        /* КНОПКА-КОРЗИНКА (ЧИСТАЯ, БЕЗ РАМОК) */
+        /* Список сказок: выравнивание в одну строку */
+        [data-testid="stHorizontalBlock"] {
+            align-items: center !important;
+            gap: 0px !important;
+            margin-bottom: -10px !important; /* Уплотняем список */
+        }
+
+        /* Кнопка с названием сказки (убираем рамки) */
+        [data-testid="stSidebar"] button[kind="secondary"] {
+            background: transparent !important;
+            border: 1px solid rgba(56, 189, 248, 0.2) !important;
+            color: #ffffff !important;
+            text-align: left !important;
+            padding: 5px 10px !important;
+        }
+
+        /* --- 3. УДАЛЯЕМ КВАДРАТИКИ У КОРЗИНЫ (ТОТАЛЬНО) --- */
         button[key*="del_"] {
             border: none !important;
             background: transparent !important;
+            background-color: transparent !important;
             box-shadow: none !important;
+            outline: none !important;
             color: #ff4b4b !important;
-            font-size: 1.2rem !important;
-            padding: 0 !important;
-            width: auto !important;
-            min-width: 30px !important;
+            padding: 0px !important;
+            width: 30px !important;
+            height: 30px !important;
+            margin-top: 5px !important;
         }
         
-        /* Убираем рамку при наведении на корзинку */
+        /* Убираем рамки при наведении и нажатии */
         button[key*="del_"]:hover, button[key*="del_"]:active, button[key*="del_"]:focus {
             background: transparent !important;
             border: none !important;
-            color: #ff6b6b !important;
             box-shadow: none !important;
-            outline: none !important;
+            color: #ff6b6b !important;
         }
 
-        /* 5. ТЕКСТ */
-        p, label, h1, h2, h3, span { 
-            color: #ffffff !important; 
-            font-weight: 600 !important;
+        /* --- 4. НИЖНЯЯ КНОПКА (ВЫЙТИ) - ФИКС БЕЛОГО ЦВЕТА --- */
+        /* Находим последнюю кнопку в сайдбаре */
+        [data-testid="stSidebar"] .stButton:last-child button {
+            background: rgba(255, 75, 75, 0.1) !important;
+            border: 1px solid #ff4b4b !important;
+            color: #ff4b4b !important;
+        }
+        [data-testid="stSidebar"] .stButton:last-child button:hover {
+            background: #ff4b4b !important;
+            color: white !important;
         }
 
-        /* Поля ввода внутри формы */
-        .stTextInput input, .stTextArea textarea {
-            background-color: rgba(15, 23, 42, 0.9) !important;
+        /* --- 5. ЦЕНТРАЛЬНЫЙ БЛОК --- */
+        .stForm, [data-testid="stForm"] {
+            background: rgba(255, 255, 255, 0.05) !important;
+            backdrop-filter: blur(15px) !important;
+            border: 1px solid rgba(56, 189, 248, 0.3) !important;
+            border-radius: 20px !important;
+            max-width: 600px !important;
+            margin: auto !important;
+        }
+
+        /* Кнопки времени 3, 5, 10 - чтобы не были белыми */
+        div[data-testid="stHorizontalBlock"] button {
+            background-color: #1e293b !important;
             color: white !important;
             border: 1px solid #38bdf8 !important;
         }
