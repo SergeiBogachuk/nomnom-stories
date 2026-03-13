@@ -2,12 +2,11 @@ import streamlit as st
 import base64
 import streamlit.components.v1 as components
 
-# Импортируем наши модули
 from styles import apply_styles
 from database import check_user, get_user_stories, save_story, update_audio
 from ai_engine import generate_story_text, generate_image, get_speech_b64
 
-# --- 1. CONFIG (Добавили авто-раскрытие панели) ---
+# --- CONFIG ---
 st.set_page_config(
     page_title="NomNom Stories", 
     page_icon="🌙", 
@@ -23,10 +22,10 @@ def get_bg_music_html():
             return f'<audio autoplay loop id="bg_music"><source src="data:audio/mp3;base64,{data}" type="audio/mp3"></audio><script>document.getElementById("bg_music").volume = 0.1;</script>'
     except: return ""
 
-# --- 2. TRANSLATIONS ---
+# --- TRANSLATIONS (Убрали GPT-5.3 из заголовка) ---
 lang_dict = {
     "Русский": {
-        "title": "✨ NomNom Stories (GPT-5.3 PRO)",
+        "title": "✨ NomNom Stories",
         "child_name": "Имя ребенка", "skills_label": "🎯 Чему научим сегодня?",
         "duration": "⏳ Длительность:", "details": "✍️ О чем будет сказка?",
         "btn_create": "🚀 СОЗДАТЬ МАГИЮ ✨", "sidebar_library": "📚 Мои сказки",
@@ -36,7 +35,7 @@ lang_dict = {
         "skills": ["Честность", "Смелость", "Доброта", "Трудолюбие", "Вежливость", "Гигиена", "Дружба", "Усидчивость"]
     },
     "English": {
-        "title": "✨ NomNom Stories (GPT-5.3 PRO)",
+        "title": "✨ NomNom Stories",
         "child_name": "Child's Name", "skills_label": "🎯 Lesson?",
         "duration": "⏳ Duration:", "details": "✍️ Plot?",
         "btn_create": "🚀 CREATE MAGIC ✨", "sidebar_library": "📚 My Stories",
@@ -45,7 +44,7 @@ lang_dict = {
     }
 }
 
-# --- 3. LOGIC ---
+# --- LOGIC ---
 if not st.session_state.get("logged_in", False):
     st.title("🌟 NomNom Stories")
     with st.form("login_form"):
