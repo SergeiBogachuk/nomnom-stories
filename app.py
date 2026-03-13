@@ -1,63 +1,52 @@
 import streamlit as st
 import base64
-import streamlit.components.v1 as components
-
 from styles import apply_styles
-from database import check_user, get_user_stories, save_story, update_audio, delete_story
+from database import check_user, get_user_stories, save_story, update_audio
 from ai_engine import generate_story_text, generate_image, get_speech_b64
 
-st.set_page_config(page_title="NomNom Stories", page_icon="🌙", layout="wide", initial_sidebar_state="expanded")
+st.set_page_config(page_title="NomNom Stories", layout="wide", initial_sidebar_state="expanded")
 apply_styles()
 
 if not st.session_state.get("logged_in", False):
-    st.markdown("<h1 style='text-align: center; color: white;'>🌟 Вход в NomNom</h1>", unsafe_allow_html=True)
-    with st.form("login_form"):
-        e = st.text_input("Email")
-        p = st.text_input("Пароль", type="password")
-        if st.form_submit_button("Войти", type="primary", use_container_width=True):
-            if check_user(e, p):
-                st.session_state.logged_in, st.session_state.user_email = True, e
-                st.rerun()
-            else: st.error("Ошибка входа")
+    _, center, _ = st.columns([1, 1.5, 1])
+    with center:
+        st.markdown("<h1 style='text-align: center;'>🌟 NomNom Stories</h1>", unsafe_allow_html=True)
+        with st.form("login_form"):
+            e = st.text_input("Email")
+            p = st.text_input("Пароль", type="password")
+            if st.form_submit_button("Войти", use_container_width=True):
+                if check_user(e, p):
+                    st.session_state.logged_in, st.session_state.user_email = True, e
+                    st.rerun()
 else:
     if 'time_val' not in st.session_state: st.session_state.time_val = 5
     if 'view_story' not in st.session_state: st.session_state.view_story = None
 
+    # --- САЙДБАР БЕЗ КОРЗИНОК ---
     with st.sidebar:
         st.write(f"👤 {st.session_state.user_email}")
-        
-        with st.expander("📚 Мои сказки", expanded=True):
-            stories = get_user_stories(st.session_state.user_email)
-            for s in stories.data:
-                col_t, col_d = st.columns([5, 1])
-                with col_t:
-                    if st.button(s.get('title') or "Сказка", key=f"b_{s['id']}", use_container_width=True):
-                        st.session_state.view_story = s
-                        st.rerun()
-                with col_d:
-                    if st.button("🗑️", key=f"del_{s['id']}"):
-                        delete_story(s['id'])
-                        st.rerun()
+        st.subheader("📚 Мои сказки")
+        stories = get_user_stories(st.session_state.user_email)
+        for s in stories.data:
+            if st.button(s.get('title') or "Сказка", key=f"btn_{s['id']}", use_container_width=True):
+                st.session_state.view_story = s
+                st.rerun()
         
         st.divider()
-        # Кнопки с явным rerun()
         if st.button("➕ Новая сказка", type="primary", use_container_width=True):
             st.session_state.view_story = None
             st.rerun()
-            
-        if st.button("🚪 Выйти из аккаунта", use_container_width=True):
+        if st.button("🚪 Выйти", use_container_width=True):
             st.session_state.logged_in = False
-            st.session_state.user_email = None
             st.rerun()
 
-    # --- ЦЕНТРАЛЬНЫЙ БЛОК ---
+    # --- ГЛАВНЫЙ ЭКРАН ---
     if st.session_state.view_story:
         s = st.session_state.view_story
         st.title(f"📖 {s.get('title')}")
-        if s.get('audio_base64'):
-            st.audio(base64.b64decode(s['audio_base64']))
+        if s.get('audio_base64'): st.audio(base64.b64decode(s['audio_base64']))
         if s.get('image_url'): st.image(s['image_url'], use_container_width=True)
-        st.markdown(f'<div style="background: white; color: #1e293b; padding: 30px; border-radius: 20px;">{s["story_text"]}</div>', unsafe_allow_html=True)
+        st.markdown(f'<div style="background:white; color:#1e293b; padding:30px; border-radius:15px; font-size:1.2rem;">{s["story_text"]}</div>', unsafe_allow_html=True)
     else:
         st.title("✨ Создать сказку")
         cn = st.text_input("Имя ребенка", value="Даша")
@@ -74,7 +63,7 @@ else:
                 st.session_state.time_val = t
                 st.rerun()
 
-        details = st.text_area("О чем сказка?")
+        details = st.text_area("О чем будет история?")
         if st.button("🚀 СОЗДАТЬ МАГИЮ", type="primary", use_container_width=True):
             with st.spinner("🧙‍♂️..."):
                 txt = generate_story_text(cn, "Русский", skills, details, st.session_state.time_val)
