@@ -21,6 +21,7 @@ def get_bg_music_html():
             return f'<audio autoplay loop id="bg_music"><source src="data:audio/mp3;base64,{data}" type="audio/mp3"></audio><script>document.getElementById("bg_music").volume = 0.1;</script>'
     except: return ""
 
+# --- ОБНОВЛЕННЫЙ СЛОВАРЬ (Добавил переводы) ---
 lang_dict = {
     "Русский": {
         "title": "✨ NomNom Stories",
@@ -31,6 +32,26 @@ lang_dict = {
         "opt_img": "🎨 Текст + Картинка", "opt_audio": "🎧 Только Аудио",
         "voices": {"Марина": "ymDCYd8puC7gYjxIamPt", "Николай": "8JVbfL6oEdmuxKn5DK2C", "Алиса": "EXAVITQu4vr4xnSDxMaL"},
         "skills": ["Честность", "Смелость", "Доброта", "Трудолюбие", "Вежливость", "Гигиена", "Дружба", "Усидчивость"]
+    },
+    "English": {
+        "title": "✨ NomNom Stories",
+        "child_name": "Child's Name", "skills_label": "🎯 What shall we teach today?",
+        "duration": "⏳ Duration:", "details": "✍️ What is the story about?",
+        "btn_create": "🚀 CREATE MAGIC ✨", "sidebar_library": "📚 My Stories",
+        "sidebar_voice": "🔊 Voice", "sidebar_new": "➕ New Story",
+        "opt_img": "🎨 Text + Image", "opt_audio": "🎧 Audio Only",
+        "voices": {"Alice": "EXAVITQu4vr4xnSDxMaL", "Nicholas": "8JVbfL6oEdmuxKn5DK2C"},
+        "skills": ["Honesty", "Bravery", "Kindness", "Hard work", "Politeness", "Hygiene", "Friendship", "Patience"]
+    },
+    "Română": {
+        "title": "✨ NomNom Stories",
+        "child_name": "Numele copilului", "skills_label": "🎯 Ce învățăm astăzi?",
+        "duration": "⏳ Durată:", "details": "✍️ Despre ce va fi povestea?",
+        "btn_create": "🚀 CREEAZĂ MAGIE ✨", "sidebar_library": "📚 Poveștile mele",
+        "sidebar_voice": "🔊 Voce", "sidebar_new": "➕ Poveste nouă",
+        "opt_img": "🎨 Text + Imagine", "opt_audio": "🎧 Doar Audio",
+        "voices": {"Alina": "EXAVITQu4vr4xnSDxMaL", "Marcel": "8JVbfL6oEdmuxKn5DK2C"},
+        "skills": ["Onestitate", "Curaj", "Bunătate", "Hărnicie", "Politețe", "Igienă", "Prietenie", "Răbdare"]
     }
 }
 
@@ -51,11 +72,24 @@ else:
     # --- ОСНОВНОЙ ЭКРАН ---
     if 'time_val' not in st.session_state: st.session_state.time_val = 5
     if 'view_story' not in st.session_state: st.session_state.view_story = None
+    
+    # Инициализация языка в сессии, если его нет
     if 'sel_lang' not in st.session_state: st.session_state.sel_lang = "Русский"
-    T = lang_dict["Русский"]
+    
+    # Привязываем интерфейс к выбранному языку
+    T = lang_dict.get(st.session_state.sel_lang, lang_dict["Русский"])
 
     with st.sidebar:
         st.success(f"Аккаунт: {st.session_state.user_email}")
+        
+        # Переключатель языка теперь в сайдбаре, чтобы не мешал в центре
+        st.session_state.sel_lang = st.selectbox(
+            "🌍 Language / Язык", 
+            list(lang_dict.keys()), 
+            index=list(lang_dict.keys()).index(st.session_state.sel_lang),
+            key="lang_selector"
+        )
+        
         with st.expander(T['sidebar_library']):
             stories = get_user_stories(st.session_state.user_email)
             for s in stories.data:
@@ -95,14 +129,8 @@ else:
             st.title(T['title'])
             cn = st.text_input(T['child_name'], value="Даша")
             
-            # --- ДОБАВЛЕН ВЫБОР ЯЗЫКА ---
-            chosen_lang = st.selectbox(
-                "🌍 Язык сказки / Story Language", 
-                ["Русский", "English", "Română", "Deutsch"], 
-                key="lang_selector_main"
-            )
-            
-            skills = st.multiselect(T['skills_label'], T['skills'], default=["Честность"])
+            # Темы теперь берутся из словаря выбранного языка
+            skills = st.multiselect(T['skills_label'], T['skills'], default=[T['skills'][0]])
             
             c1, c2 = st.columns(2)
             with c1: use_img = st.checkbox(T['opt_img'], value=True)
@@ -119,10 +147,10 @@ else:
             details = st.text_area(T['details'])
 
             if st.button(T['btn_create'], type="primary", use_container_width=True):
-                with st.spinner("✨ Колдуем..."):
+                with st.spinner("✨..."):
                     try:
-                        # Используем выбранный в selectbox язык (chosen_lang)
-                        txt = generate_story_text(cn, chosen_lang, skills, details, st.session_state.time_val)
+                        # Передаем выбранный язык (st.session_state.sel_lang)
+                        txt = generate_story_text(cn, st.session_state.sel_lang, skills, details, st.session_state.time_val)
                         ttl = txt.split('\n')[0].strip()
                         url = generate_image(ttl) if use_img else None
                         save_story({"user_email": st.session_state.user_email, "child_name": cn, "title": ttl, "story_text": txt, "image_url": url})
