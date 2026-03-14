@@ -126,31 +126,39 @@ else:
             details = st.text_area(T['details'])
 
             # --- ИСПРАВЛЕННЫЙ БЛОК ГЕНЕРАЦИИ ---
-            if st.button(T['btn_create'], type="primary", use_container_width=True):
+           if st.button(T['btn_create'], type="primary", use_container_width=True):
                 with st.spinner("✨..."):
                     try:
+                        # 1. Генерируем текст
                         txt = generate_story_text(cn, st.session_state.sel_lang, skills, details, st.session_state.time_val)
                         if not txt:
                             st.error("Ошибка: Текст не создан")
-                        else:
-                            ttl = txt.split('\n')[0].strip()
-                            url = generate_image(ttl) if (not use_audio and use_img) else None
+                            st.stop()
                             
-                            res = save_story({
-                                "user_email": st.session_state.user_email, 
-                                "child_name": cn, 
-                                "title": ttl, 
-                                "story_text": txt, 
-                                "image_url": url
-                            })
+                        ttl = txt.split('\n')[0].strip()
+                        url = generate_image(ttl) if (not use_audio and use_img) else None
+                        
+                        # 2. Сохраняем сказку БЕЗ аудио сначала (чтобы не было ошибки базы)
+                        story_data = {
+                            "user_email": st.session_state.user_email, 
+                            "child_name": cn, 
+                            "title": ttl, 
+                            "story_text": txt, 
+                            "image_url": url
+                        }
+                        
+                        res = save_story(story_data)
+                        
+                        # 3. Если вставка прошла успешно и нужно аудио
+                        if res and hasattr(res, 'data') and len(res.data) > 0:
+                            new_id = res.data[0]['id']
                             
-                            # Если выбрано аудио — озвучиваем сразу
-                            if use_audio and res:
+                            if use_audio:
                                 audio_b64 = get_speech_b64(txt, voice_id)
                                 if audio_b64:
-                                    # Получаем ID новой сказки из результата вставки
-                                    new_id = res.data[0]['id']
+                                    # Обновляем аудио отдельным вызовом
                                     update_audio(new_id, audio_b64)
-                            st.rerun()
+                        
+                        st.rerun()
                     except Exception as e: 
                         st.error(f"Ошибка: {e}")
