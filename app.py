@@ -146,10 +146,10 @@ else:
 
             details = st.text_area(T['details'])
 
-            if st.button(T['btn_create'], type="primary", use_container_width=True):
+           if st.button(T['btn_create'], type="primary", use_container_width=True):
                 with st.spinner("✨ Колдуем..."):
                     try:
-                        # 1. Сначала текст
+                        # 1. Генерируем текст
                         txt = generate_story_text(cn, st.session_state.sel_lang, skills, details, st.session_state.time_val)
                         if not txt:
                             st.error("Ошибка: Текст не создан")
@@ -158,25 +158,28 @@ else:
                         ttl = txt.split('\n')[0].strip()
                         url = generate_image(ttl) if (not use_audio and use_img) else None
                         
-                        # 2. Сохраняем ТОЛЬКО текст и картинку
-                        new_story = {
-                            "user_email": st.session_state.user_email, 
-                            "child_name": cn, 
-                            "title": ttl, 
-                            "story_text": txt, 
+                        # 2. ПОЛНАЯ ОЧИСТКА ДАННЫХ (ФИЛЬТР)
+                        # Мы создаем список только тех колонок, которые база ТОЧНО знает
+                        clean_story = {
+                            "user_email": st.session_state.user_email,
+                            "child_name": cn,
+                            "title": ttl,
+                            "story_text": txt,
                             "image_url": url
                         }
                         
-                        # Вызываем обновленную функцию
-                        res = save_story(new_story)
+                        # 3. Сохраняем только чистые данные
+                        res = save_story(clean_story)
                         
-                        # 3. Добавляем аудио только после успешного сохранения
-                        if res and len(res.data) > 0:
+                        # 4. Проверяем результат и добавляем аудио вторым шагом
+                        if res and hasattr(res, 'data') and len(res.data) > 0:
                             new_id = res.data[0]['id']
+                            
                             if use_audio:
                                 with st.spinner("🔊 Озвучиваем..."):
                                     audio_b64 = get_speech_b64(txt, voice_id)
                                     if audio_b64:
+                                        # Используем отдельную функцию для аудио
                                         update_audio(new_id, audio_b64)
                         
                         st.rerun()
