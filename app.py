@@ -149,22 +149,16 @@ else:
             if st.button(T['btn_create'], type="primary", use_container_width=True):
                 with st.spinner("✨ Колдуем..."):
                     try:
-                        # 1. Сначала ВСЕГДА генерируем текст сказки
+                        # 1. Сначала текст
                         txt = generate_story_text(cn, st.session_state.sel_lang, skills, details, st.session_state.time_val)
-                        
-                        # Проверка: если текст пустой, выводим ошибку
                         if not txt:
-                            st.error("Ошибка: ИИ не смог создать текст сказки.")
+                            st.error("Ошибка: Текст не создан")
                             st.stop()
                             
                         ttl = txt.split('\n')[0].strip()
+                        url = generate_image(ttl) if (not use_audio and use_img) else None
                         
-                        # 2. Картинка — генерируем, если выбран чекбокс "Text + Image"
-                        url = None
-                        if use_img:
-                            url = generate_image(ttl)
-                        
-                        # 3. Сохраняем сказку в базу (Текст теперь сохранится в любом случае)
+                        # 2. Сохраняем ТОЛЬКО текст и картинку
                         new_story = {
                             "user_email": st.session_state.user_email, 
                             "child_name": cn, 
@@ -172,14 +166,19 @@ else:
                             "story_text": txt, 
                             "image_url": url
                         }
-                        story_id = save_story(new_story)
                         
-                        # 4. Если выбрано "Только Аудио" — сразу делаем озвучку
-                        if use_audio:
-                            audio_b64 = get_speech_b64(txt, voice_id)
-                            if audio_b64:
-                                update_audio(story_id, audio_b64)
+                        # Вызываем обновленную функцию
+                        res = save_story(new_story)
+                        
+                        # 3. Добавляем аудио только после успешного сохранения
+                        if res and len(res.data) > 0:
+                            new_id = res.data[0]['id']
+                            if use_audio:
+                                with st.spinner("🔊 Озвучиваем..."):
+                                    audio_b64 = get_speech_b64(txt, voice_id)
+                                    if audio_b64:
+                                        update_audio(new_id, audio_b64)
                         
                         st.rerun()
                     except Exception as e: 
-                        st.error(f"Ошибка п��и создании: {e}")
+                        st.error(f"Критическая ошибка: {e}")
