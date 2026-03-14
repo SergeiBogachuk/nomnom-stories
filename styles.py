@@ -3,7 +3,14 @@ import streamlit as st
 def apply_styles():
     st.markdown("""
         <style>
-        .stApp { background: #0a0f1e; color: #f8fafc; }
+        /* 1. ИЗМЕНИЛИ ТОЛЬКО ЭТО: Добавили фоновое изображение вместо простого цвета */
+        .stApp { 
+            background: linear-gradient(rgba(10, 15, 30, 0.8), rgba(10, 15, 30, 0.8)), 
+                        url("https://images.unsplash.com/photo-1534796636912-3b95b3ab5986?q=80&w=2000&auto=format&fit=crop") !important;
+            background-size: cover !important;
+            background-attachment: fixed !important;
+            color: #f8fafc; 
+        }
         
         /* Кнопка сайдбара */
         button[kind="headerNoPadding"] {
@@ -18,7 +25,6 @@ def apply_styles():
         }
 
         /* ЦЕНТРИРОВАНИЕ И ШИРИНА ПОЛЕЙ */
-        /* Ограничиваем ширину основного блока и ставим по центру */
         [data-testid="stVerticalBlock"] > div:has(div.stTextInput), 
         [data-testid="stVerticalBlock"] > div:has(div.stTextArea),
         .stForm {
