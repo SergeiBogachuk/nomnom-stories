@@ -1,77 +1,97 @@
 import streamlit as st
+import base64
+from styles import apply_styles
+from database import check_user, get_user_stories, save_story, update_audio, delete_story
+from ai_engine import generate_story_text, generate_image, get_speech_b64
 
-def apply_styles():
-    st.markdown("""
-        <style>
-        /* 1. ФОН И ОБЩИЙ ВИД */
-        .stApp {
-            background: linear-gradient(rgba(10, 15, 30, 0.85), rgba(10, 15, 30, 0.85)), 
-                        url("https://images.unsplash.com/photo-1419242902214-272b3f66ee7a?q=80&w=2013&auto=format&fit=crop") !important;
-            background-size: cover !important;
-            background-attachment: fixed !important;
-        }
+# Фиксируем настройки, чтобы панель была открыта, но не глючила
+st.set_page_config(page_title="NomNom Stories", layout="wide", initial_sidebar_state="expanded")
+apply_styles()
 
-        /* 2. КОМПАКТНАЯ ФОРМА ПО ЦЕНТРУ */
-        [data-testid="stMainViewContainer"] [data-testid="stVerticalBlock"] > div {
-            max-width: 600px !important;
-            margin: 0 auto !important;
-        }
+if not st.session_state.get("logged_in", False):
+    # Экран входа — оставляем как был, по центру
+    _, center, _ = st.columns([1, 1.5, 1])
+    with center:
+        st.markdown("<h1 style='text-align: center; color: white;'>🌟 Вход в NomNom</h1>", unsafe_allow_html=True)
+        with st.form("login_form"):
+            e = st.text_input("Email")
+            p = st.text_input("Пароль", type="password")
+            if st.form_submit_button("Войти", use_container_width=True):
+                if check_user(e, p):
+                    st.session_state.logged_in, st.session_state.user_email = True, e
+                    st.rerun()
+else:
+    # ОСНОВНОЙ ИНТЕРФЕЙС
+    if 'time_val' not in st.session_state: st.session_state.time_val = 5
+    if 'view_story' not in st.session_state: st.session_state.view_story = None
 
-        /* 3. ЯРКИЙ БЕЛЫЙ ТЕКСТ */
-        h1, h2, h3, label p, .stMarkdown p {
-            color: #ffffff !important;
-            opacity: 1 !important;
-            font-weight: 600 !important;
-        }
-
-        /* 4. САЙДБАР (ЛЕВАЯ ПАНЕЛЬ) */
-        [data-testid="stSidebar"] {
-            background-color: #0f172a !important;
-            border-right: 1px solid #38bdf8 !important;
-        }
+    with st.sidebar:
+        st.markdown(f"### 👤 {st.session_state.user_email}")
+        st.divider()
+        st.subheader("📚 Мои сказки")
         
-        [data-testid="stSidebar"] button {
-            color: white !important;
-            background-color: rgba(56, 189, 248, 0.1) !important;
-            border: 1px solid rgba(56, 189, 248, 0.3) !important;
-            text-align: left !important;
-            margin-bottom: 5px !important;
-        }
-
-        /* 5. ПОЛЯ ВВОДА И ТЕКСТ ВНУТРИ */
-        .stTextInput input, .stTextArea textarea, [data-baseweb="select"] * {
-            background-color: rgba(255, 255, 255, 0.05) !important;
-            color: white !important;
-            border: 1px solid #38bdf8 !important;
-        }
-
-        /* Кнопки времени и создания */
-        div[data-testid="stHorizontalBlock"] button {
-            background-color: #1e293b !important;
-            color: white !important;
-            border: 1px solid #38bdf8 !important;
-        }
-        button[kind="primary"] {
-            background: linear-gradient(135deg, #38bdf8, #1e40af) !important;
-            border: none !important;
-        }
+        stories = get_user_stories(st.session_state.user_email)
+        for s in stories.data:
+            col_t, col_d = st.columns([5, 1])
+            with col_t:
+                if st.button(s.get('title') or "Сказка", key=f"s_{s['id']}", use_container_width=True):
+                    st.session_state.view_story = s
+                    st.rerun()
+            with col_d:
+                # Маленькая корзинка без лишних рамок
+                if st.button("🗑️", key=f"d_{s['id']}"):
+                    delete_story(s['id'])
+                    st.rerun()
         
-        /* Кнопка выхода */
-        [data-testid="stSidebar"] .stButton:last-child button {
-            border: 1px solid #ff4b4b !important;
-            color: #ff4b4b !important;
-            background: transparent !important;
-        }
+        st.divider()
+        if st.button("➕ Новая сказка", type="primary", use_container_width=True):
+            st.session_state.view_story = None
+            st.rerun()
+        if st.button("🚪 Выйти", use_container_width=True):
+            st.session_state.logged_in = False
+            st.rerun()
 
-        /* --- ФИКС ДЛЯ ВЫБОРА ЯЗЫКА (ЧТОБЫ ЗАКРЫВАЛОСЬ) --- */
-        div[data-baseweb="popover"] {
-            z-index: 999999 !important;
-        }
-        div[data-baseweb="select"] {
-            cursor: pointer !important;
-        }
-        .stSelectbox div[role="button"] {
-            pointer-events: all !important;
-        }
-        </style>
-        """, unsafe_allow_html=True)
+    if st.session_state.view_story:
+        # Просмотр сказки
+        s = st.session_state.view_story
+        st.markdown(f"<h1 style='text-align: center; color: white;'>📖 {s.get('title')}</h1>", unsafe_allow_html=True)
+        if s.get('audio_base64'): st.audio(base64.b64decode(s['audio_base64']))
+        if s.get('image_url'): st.image(s['image_url'], use_container_width=True)
+        st.markdown(f'<div style="background:white; color:#1e293b; padding:25px; border-radius:15px;">{s["story_text"]}</div>', unsafe_allow_html=True)
+    else:
+        # СОЗДАНИЕ СКАЗКИ
+        st.markdown("<h1 style='text-align: center; color: white;'>✨ Создать магию</h1>", unsafe_allow_html=True)
+        
+        cn = st.text_input("Имя ребенка", value="Даша")
+        
+        # ТОЛЬКО ЭТА ПРАВКА: Выбор языка с уникальным ключом, чтобы не висло
+        selected_lang = st.selectbox(
+            "🌍 Язык сказки", 
+            ["Русский", "English", "Română", "Deutsch"], 
+            index=0,
+            key="lang_select_box" 
+        )
+        
+        all_skills = ["Честность", "Доброта", "Смелость", "Дружба", "Гигиена", "Трудолюбие"]
+        skills = st.multiselect("🎯 Чему научим сегодня?", all_skills, default=["Честность"])
+        
+        c1, c2 = st.columns(2)
+        use_img = c1.checkbox("🎨 С картинкой", value=True)
+        use_audio = c2.checkbox("🎧 Только Аудио", value=False)
+
+        st.write("⏳ Длительность:")
+        t_cols = st.columns(3)
+        for i, t in enumerate([3, 5, 10]):
+            btn_t = "primary" if st.session_state.time_val == t else "secondary"
+            if t_cols[i].button(f"{t} min", key=f"t_{t}", type=btn_t, use_container_width=True):
+                st.session_state.time_val = t
+                st.rerun()
+
+        details = st.text_area("✍️ О чем будет история?")
+        if st.button("🚀 СОЗДАТЬ МАГИЮ", type="primary", use_container_width=True):
+            with st.spinner("🧙‍♂️..."):
+                txt = generate_story_text(cn, selected_lang, skills, details, st.session_state.time_val)
+                ttl = txt.split('\n')[0].strip()
+                url = generate_image(ttl) if use_img else None
+                save_story({"user_email": st.session_state.user_email, "child_name": cn, "title": ttl, "story_text": txt, "image_url": url})
+                st.rerun()
