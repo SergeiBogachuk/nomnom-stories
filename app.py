@@ -21,6 +21,7 @@ def get_bg_music_html():
             return f'<audio autoplay loop id="bg_music"><source src="data:audio/mp3;base64,{data}" type="audio/mp3"></audio><script>document.getElementById("bg_music").volume = 0.1;</script>'
     except: return ""
 
+# --- СЛОВАРЬ (Строгое соответствие ключей) ---
 lang_dict = {
     "Русский": {
         "title": "✨ NomNom Stories",
@@ -68,14 +69,15 @@ if not st.session_state.get("logged_in", False):
                     st.rerun()
                 else: st.error("Ошибка входа")
 else:
-    # --- ОСНОВНОЙ ЭКРАН ---
+    # --- ИНИЦИАЛИЗАЦИЯ ---
     if 'time_val' not in st.session_state: st.session_state.time_val = 5
     if 'view_story' not in st.session_state: st.session_state.view_story = None
     if 'sel_lang' not in st.session_state: st.session_state.sel_lang = "Русский"
     
-    # Привязываем данные к выбранному языку
-    T = lang_dict.get(st.session_state.sel_lang, lang_dict["Русский"])
+    # ПРИВЯЗКА ТЕКУЩЕГО ЯЗЫКА
+    T = lang_dict[st.session_state.sel_lang]
 
+    # --- САЙДБАР ---
     with st.sidebar:
         st.success(f"Аккаунт: {st.session_state.user_email}")
         with st.expander(T['sidebar_library']):
@@ -91,49 +93,41 @@ else:
             st.session_state.view_story = None
             st.rerun()
 
+    # --- ЦЕНТР ---
     if st.session_state.view_story:
         s = st.session_state.view_story
         st.title(f"📖 {s.get('title')}")
         components.html(get_bg_music_html(), height=0)
-        
         if s.get('audio_base64'):
             st.audio(base64.b64decode(s['audio_base64']))
-        else:
-            if st.button("🔊 " + T['sidebar_voice'], type="primary"):
-                with st.spinner("..."):
-                    audio_b64 = get_speech_b64(s['story_text'], voice_id)
-                    if audio_b64:
-                        update_audio(s['id'], audio_b64)
-                        st.audio(base64.b64decode(audio_b64))
-                        st.rerun()
-        
         if s.get('image_url'): st.image(s['image_url'], use_container_width=True)
         st.markdown(f'<div class="story-output">{s["story_text"]}</div>', unsafe_allow_html=True)
             
     else:
-        # ЭКРАН СОЗДАНИЯ
         _, center, _ = st.columns([1, 2, 1])
         with center:
             st.title(T['title'])
             cn = st.text_input(T['child_name'], value="Даша")
             
-            # ВЫБОР ЯЗЫКА - ВЕРНУЛ В ЦЕНТР, ПОД ИМЯ
-            st.session_state.sel_lang = st.selectbox(
+            # ИСПРАВЛЕННЫЙ ВЫБОР ЯЗЫКА
+            lang_list = list(lang_dict.keys())
+            new_lang = st.selectbox(
                 "🌍 Language / Язык", 
-                list(lang_dict.keys()), 
-                index=list(lang_dict.keys()).index(st.session_state.sel_lang),
+                lang_list, 
+                index=lang_list.index(st.session_state.sel_lang),
                 key="lang_selector_center"
             )
             
-            # Обновляем T сразу после смены в селекторе
-            T = lang_dict[st.session_state.sel_lang]
+            # Если язык изменили в списке — обновляем сессию и ПЕРЕЗАГРУЖАЕМ (rerun), чтобы всё перевелось
+            if new_lang != st.session_state.sel_lang:
+                st.session_state.sel_lang = new_lang
+                st.rerun()
             
             skills = st.multiselect(T['skills_label'], T['skills'], default=[T['skills'][0]])
             
             c1, c2 = st.columns(2)
             with c1: use_img = st.checkbox(T['opt_img'], value=True)
             with c2: use_audio = st.checkbox(T['opt_audio'], value=False)
-            st.session_state.mode_audio = use_audio
 
             st.write(T['duration'])
             t_cols = st.columns(3)
