@@ -36,7 +36,7 @@ lang_dict = {
 
 # --- ЛОГИКА ВХОДА ---
 if not st.session_state.get("logged_in", False):
-    _, center, _ = st.columns([1, 2, 1]) # Создаем колонки для центрирования
+    _, center, _ = st.columns([1, 2, 1]) 
     with center:
         st.title("🌟 Вход")
         with st.form("login_form"):
@@ -70,7 +70,6 @@ else:
             st.rerun()
 
     if st.session_state.view_story:
-        # Экран готовой сказки
         s = st.session_state.view_story
         st.title(f"📖 {s.get('title')}")
         components.html(get_bg_music_html(), height=0)
@@ -90,11 +89,19 @@ else:
         st.markdown(f'<div class="story-output">{s["story_text"]}</div>', unsafe_allow_html=True)
             
     else:
-        # ЭКРАН СОЗДАНИЯ (Центрируем поля)
+        # ЭКРАН СОЗДАНИЯ
         _, center, _ = st.columns([1, 2, 1])
         with center:
             st.title(T['title'])
             cn = st.text_input(T['child_name'], value="Даша")
+            
+            # --- ДОБАВЛЕН ВЫБОР ЯЗЫКА ---
+            chosen_lang = st.selectbox(
+                "🌍 Язык сказки / Story Language", 
+                ["Русский", "English", "Română", "Deutsch"], 
+                key="lang_selector_main"
+            )
+            
             skills = st.multiselect(T['skills_label'], T['skills'], default=["Честность"])
             
             c1, c2 = st.columns(2)
@@ -114,7 +121,8 @@ else:
             if st.button(T['btn_create'], type="primary", use_container_width=True):
                 with st.spinner("✨ Колдуем..."):
                     try:
-                        txt = generate_story_text(cn, "Русский", skills, details, st.session_state.time_val)
+                        # Используем выбранный в selectbox язык (chosen_lang)
+                        txt = generate_story_text(cn, chosen_lang, skills, details, st.session_state.time_val)
                         ttl = txt.split('\n')[0].strip()
                         url = generate_image(ttl) if use_img else None
                         save_story({"user_email": st.session_state.user_email, "child_name": cn, "title": ttl, "story_text": txt, "image_url": url})
