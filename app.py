@@ -175,3 +175,4 @@ else:
                         st.rerun()
                     except Exception as e: 
                         st.error(f"Ошибка при создании: {e}")
+                    
