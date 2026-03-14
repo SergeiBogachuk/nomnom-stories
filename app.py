@@ -21,7 +21,6 @@ def get_bg_music_html():
             return f'<audio autoplay loop id="bg_music"><source src="data:audio/mp3;base64,{data}" type="audio/mp3"></audio><script>document.getElementById("bg_music").volume = 0.1;</script>'
     except: return ""
 
-# --- СЛОВАРЬ (Строгое соответствие ключей) ---
 lang_dict = {
     "Русский": {
         "title": "✨ NomNom Stories",
@@ -55,7 +54,6 @@ lang_dict = {
     }
 }
 
-# --- ЛОГИКА ВХОДА ---
 if not st.session_state.get("logged_in", False):
     _, center, _ = st.columns([1, 2, 1]) 
     with center:
@@ -69,15 +67,12 @@ if not st.session_state.get("logged_in", False):
                     st.rerun()
                 else: st.error("Ошибка входа")
 else:
-    # --- ИНИЦИАЛИЗАЦИЯ ---
     if 'time_val' not in st.session_state: st.session_state.time_val = 5
     if 'view_story' not in st.session_state: st.session_state.view_story = None
     if 'sel_lang' not in st.session_state: st.session_state.sel_lang = "Русский"
     
-    # ПРИВЯЗКА ТЕКУЩЕГО ЯЗЫКА
     T = lang_dict[st.session_state.sel_lang]
 
-    # --- САЙДБАР ---
     with st.sidebar:
         st.success(f"Аккаунт: {st.session_state.user_email}")
         with st.expander(T['sidebar_library']):
@@ -93,7 +88,6 @@ else:
             st.session_state.view_story = None
             st.rerun()
 
-    # --- ЦЕНТР ---
     if st.session_state.view_story:
         s = st.session_state.view_story
         st.title(f"📖 {s.get('title')}")
@@ -109,16 +103,9 @@ else:
             st.title(T['title'])
             cn = st.text_input(T['child_name'], value="Даша")
             
-            # ИСПРАВЛЕННЫЙ ВЫБОР ЯЗЫКА
             lang_list = list(lang_dict.keys())
-            new_lang = st.selectbox(
-                "🌍 Language / Язык", 
-                lang_list, 
-                index=lang_list.index(st.session_state.sel_lang),
-                key="lang_selector_center"
-            )
+            new_lang = st.selectbox("🌍 Language / Язык", lang_list, index=lang_list.index(st.session_state.sel_lang), key="lang_selector_center")
             
-            # Если язык изменили в списке — обновляем сессию и ПЕРЕЗАГРУЖАЕМ (rerun), чтобы всё перевелось
             if new_lang != st.session_state.sel_lang:
                 st.session_state.sel_lang = new_lang
                 st.rerun()
@@ -138,41 +125,32 @@ else:
 
             details = st.text_area(T['details'])
 
-           if st.button(T['btn_create'], type="primary", use_container_width=True):
-                with st.spinner("✨ Колдуем..."):
+            # --- ИСПРАВЛЕННЫЙ БЛОК ГЕНЕРАЦИИ ---
+            if st.button(T['btn_create'], type="primary", use_container_width=True):
+                with st.spinner("✨..."):
                     try:
-                        # 1. Сначала ВСЕГДА генерируем текст сказки
                         txt = generate_story_text(cn, st.session_state.sel_lang, skills, details, st.session_state.time_val)
-                        
-                        # Проверка: если текст пустой, выводим ошибку
                         if not txt:
-                            st.error("Ошибка: ИИ не смог создать текст сказки.")
-                            st.stop()
+                            st.error("Ошибка: Текст не создан")
+                        else:
+                            ttl = txt.split('\n')[0].strip()
+                            url = generate_image(ttl) if (not use_audio and use_img) else None
                             
-                        ttl = txt.split('\n')[0].strip()
-                        
-                        # 2. Картинка — только если НЕ выбрано "Только Аудио"
-                        url = None
-                        if not use_audio and use_img:
-                            url = generate_image(ttl)
-                        
-                        # 3. Сохраняем сказку в базу (Текст теперь сохранится в любом случае)
-                        new_story = {
-                            "user_email": st.session_state.user_email, 
-                            "child_name": cn, 
-                            "title": ttl, 
-                            "story_text": txt, 
-                            "image_url": url
-                        }
-                        story_id = save_story(new_story)
-                        
-                        # 4. Если выбрано "Только Аудио" — сразу делаем озвучку
-                        if use_audio:
-                            audio_b64 = get_speech_b64(txt, voice_id)
-                            if audio_b64:
-                                update_audio(story_id, audio_b64)
-                        
-                        st.rerun()
+                            res = save_story({
+                                "user_email": st.session_state.user_email, 
+                                "child_name": cn, 
+                                "title": ttl, 
+                                "story_text": txt, 
+                                "image_url": url
+                            })
+                            
+                            # Если выбрано аудио — озвучиваем сразу
+                            if use_audio and res:
+                                audio_b64 = get_speech_b64(txt, voice_id)
+                                if audio_b64:
+                                    # Получаем ID новой сказки из результата вставки
+                                    new_id = res.data[0]['id']
+                                    update_audio(new_id, audio_b64)
+                            st.rerun()
                     except Exception as e: 
-                        st.error(f"Ошибка при создании: {e}")
-                    
+                        st.error(f"Ошибка: {e}")
