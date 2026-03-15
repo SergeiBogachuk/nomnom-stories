@@ -15,6 +15,38 @@ def apply_styles():
             color: #f8fbff !important;
         }
 
+        /* ===== Верхняя шапка Streamlit ===== */
+        header[data-testid="stHeader"] {
+            background: rgba(5, 10, 24, 0.08) !important;
+            backdrop-filter: blur(6px) !important;
+        }
+
+        /* ===== Кнопка открытия sidebar на мобильном ===== */
+        [data-testid="collapsedControl"] {
+            position: fixed !important;
+            top: 12px !important;
+            left: 12px !important;
+            z-index: 999999 !important;
+            background: rgba(15, 23, 42, 0.96) !important;
+            border: 1px solid rgba(125, 211, 252, 0.26) !important;
+            border-radius: 12px !important;
+            box-shadow: 0 10px 24px rgba(2, 8, 23, 0.35) !important;
+            padding: 2px !important;
+        }
+
+        [data-testid="collapsedControl"]:hover {
+            background: rgba(30, 41, 59, 0.98) !important;
+            border-color: rgba(125, 211, 252, 0.42) !important;
+        }
+
+        [data-testid="collapsedControl"] svg,
+        [data-testid="collapsedControl"] path {
+            color: #eef6ff !important;
+            fill: #eef6ff !important;
+            stroke: #eef6ff !important;
+            opacity: 1 !important;
+        }
+
         /* ===== Основной контейнер ===== */
         [data-testid="block-container"] {
             max-width: 760px !important;
@@ -418,6 +450,11 @@ def apply_styles():
 
             .hero-subtitle {
                 font-size: 0.95rem !important;
+            }
+
+            [data-testid="collapsedControl"] {
+                top: 10px !important;
+                left: 10px !important;
             }
         }
         </style>
