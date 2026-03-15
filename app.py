@@ -144,38 +144,51 @@ else:
             details = st.text_area(T['details'])
 
             # --- ГЕНЕРАЦИЯ ---
-            if st.button(T['btn_create'], type="primary", use_container_width=True):
+           if st.button(T['btn_create'], type="primary", use_container_width=True):
                 with st.spinner("✨ Колдуем..."):
                     try:
-                        # 1. Сначала текст
-                        txt = generate_story_text(cn, st.session_state.sel_lang, skills, details, st.session_state.time_val)
-                        if txt:
-                            ttl = txt.split('\n')[0].strip()
-                            # 2. Картинка (если выбрана)
-                            url = generate_image(ttl) if use_img else None
+                        # 1. Сначала получаем текст от ИИ
+                        full_response = generate_story_text(cn, st.session_state.sel_lang, skills, details, st.session_state.time_val)
+                        
+                        if not full_response:
+                            st.error("Ошибка: ИИ не вернул текст.")
+                            st.stop()
+                        
+                        # Чистим заголовок и текст
+                        lines = full_response.split('\n')
+                        ttl = lines[0].strip()
+                        # Собираем остальной текст, убеждаясь, что он не пустой
+                        story_body = "\n".join(lines[1:]).strip() 
+                        if not story_body: # Если ИИ выдал всё одной строкой
+                            story_body = full_response
                             
-                            # 3. Сохранение (без аудио)
-                            res = save_story({
-                                "user_email": st.session_state.user_email, 
-                                "child_name": cn, 
-                                "title": ttl, 
-                                "story_text": txt, 
-                                "image_url": url
-                            })
+                        # 2. Картинка
+                        url = generate_image(ttl) if use_img else None
+                        
+                        # 3. СОХРАНЕНИЕ (Проверь, что story_text = story_body)
+                        res = save_story({
+                            "user_email": st.session_state.user_email, 
+                            "child_name": cn, 
+                            "title": ttl, 
+                            "story_text": story_body, # Вот здесь мы передаем само тело сказки
+                            "image_url": url
+                        })
+                        
+                        if res and len(res.data) > 0:
+                            current_story = res.data[0]
+                            new_id = current_story['id']
                             
-                            if res and len(res.data) > 0:
-                                current_story = res.data[0]
-                                new_id = current_story['id']
-                                
-                                # 4. Озвучка (если выбрана)
-                                if use_audio:
-                                    with st.spinner("🔊 Озвучиваем..."):
-                                        audio_b64 = get_speech_b64(txt, voice_id)
-                                        if audio_b64:
-                                            update_audio(new_id, audio_b64)
-                                            current_story['audio_base64'] = audio_b64
-                                
-                                st.session_state.view_story = current_story
-                                st.rerun()
+                            # 4. Озвучка (вторым этапом)
+                            if use_audio:
+                                with st.spinner("🔊 Озвучиваем..."):
+                                    audio_b64 = get_speech_b64(story_body, voice_id)
+                                    if audio_b64:
+                                        update_audio(new_id, audio_b64)
+                                        current_story['audio_base64'] = audio_b64
+                            
+                            # Показываем результат
+                            st.session_state.view_story = current_story
+                            st.rerun()
+                            
                     except Exception as e: 
                         st.error(f"Ошибка: {e}")
