@@ -118,7 +118,7 @@ def mount_bg_music():
                 docRef.body.appendChild(bg);
             }}
 
-            bg.volume = 0.08;
+            bg.volume = 0.18;
 
             function startBg() {{
                 try {{
