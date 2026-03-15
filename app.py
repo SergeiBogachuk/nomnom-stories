@@ -178,12 +178,12 @@ def short_story_title(title, fallback_title="Story", max_len=24):
 
 def render_story_library(stories, T, prefix="lib"):
     if not stories or not getattr(stories, "data", None):
-        st.caption(T["no_saved_stories"])
+        st.caption(T.get("no_saved_stories", "No saved stories yet"))
         return
 
     for s in stories.data:
-        full_title = s.get("title") or T["story_fallback"]
-        short_title = short_story_title(full_title, T["story_fallback"])
+        full_title = s.get("title") or T.get("story_fallback", "Story")
+        short_title = short_story_title(full_title, T.get("story_fallback", "Story"))
 
         col_story, col_del = st.columns([6, 1], gap="small")
 
@@ -199,7 +199,7 @@ def render_story_library(stories, T, prefix="lib"):
                 st.rerun()
 
         with col_del:
-            if st.button("🗑", key=f"{prefix}_del_{s['id']}", help=T["delete_help"]):
+            if st.button("🗑", key=f"{prefix}_del_{s['id']}", help=T.get("delete_help", "Delete")):
                 if delete_story(s["id"]):
                     if (
                         st.session_state.view_story
@@ -248,7 +248,18 @@ lang_dict = {
         "login_badge": "🌟 Добро пожаловать",
         "login_subtitle": "Вход в волшебную библиотеку сказок ✨",
         "login_btn": "Войти",
-        "login_error": "Ошибка входа"
+        "login_error": "Ошибка входа",
+        "email_label": "Email",
+        "password_label": "Пароль",
+        "voices": {
+            "Марина": "ymDCYd8puC7gYjxIamPt",
+            "Николай": "8JVbfL6oEdmuxKn5DK2C",
+            "Алиса": "EXAVITQu4vr4xnSDxMaL"
+        },
+        "skills": [
+            "Честность", "Смелость", "Доброта", "Трудолюбие",
+            "Вежливость", "Гигиена", "Дружба", "Усидчивость"
+        ]
     },
     "English": {
         "title": "✨ NomNom Stories",
@@ -287,7 +298,17 @@ lang_dict = {
         "login_badge": "🌟 Welcome",
         "login_subtitle": "Enter your magical bedtime stories library ✨",
         "login_btn": "Log in",
-        "login_error": "Login failed"
+        "login_error": "Login failed",
+        "email_label": "Email",
+        "password_label": "Password",
+        "voices": {
+            "Alice": "EXAVITQu4vr4xnSDxMaL",
+            "Nicholas": "8JVbfL6oEdmuxKn5DK2C"
+        },
+        "skills": [
+            "Honesty", "Bravery", "Kindness", "Hard work",
+            "Politeness", "Hygiene", "Friendship", "Patience"
+        ]
     },
     "Română": {
         "title": "✨ NomNom Stories",
@@ -326,7 +347,17 @@ lang_dict = {
         "login_badge": "🌟 Bine ai venit",
         "login_subtitle": "Intră în biblioteca magică de povești ✨",
         "login_btn": "Autentificare",
-        "login_error": "Autentificare eșuată"
+        "login_error": "Autentificare eșuată",
+        "email_label": "Email",
+        "password_label": "Parolă",
+        "voices": {
+            "Alina": "EXAVITQu4vr4xnSDxMaL",
+            "Marcel": "8JVbfL6oEdmuxKn5DK2C"
+        },
+        "skills": [
+            "Onestitate", "Curaj", "Bunătate", "Hărnicie",
+            "Politețe", "Igienă", "Prietenie", "Răbdare"
+        ]
     }
 }
 
@@ -356,28 +387,28 @@ if not st.session_state.get("logged_in", False):
     with center:
         st.markdown(
             f"""
-            <div class="hero-badge">{L["login_badge"]}</div>
+            <div class="hero-badge">{L.get("login_badge", "🌟 Welcome")}</div>
             <div class="hero-title">🌙 NomNom Stories</div>
-            <div class="hero-subtitle">{L["login_subtitle"]}</div>
+            <div class="hero-subtitle">{L.get("login_subtitle", "")}</div>
             """,
             unsafe_allow_html=True
         )
 
         with st.form("login_form"):
-            e = st.text_input("Email")
-            p = st.text_input("Пароль", type="password")
+            e = st.text_input(L.get("email_label", "Email"))
+            p = st.text_input(L.get("password_label", "Password"), type="password")
 
-            if st.form_submit_button(L["login_btn"], type="primary", use_container_width=True):
+            if st.form_submit_button(L.get("login_btn", "Log in"), type="primary", use_container_width=True):
                 if check_user(e, p):
                     st.session_state.logged_in = True
                     st.session_state.user_email = e
                     st.session_state.page_mode = "form"
                     st.rerun()
                 else:
-                    st.error(L["login_error"])
+                    st.error(L.get("login_error", "Login failed"))
 
 else:
-    T = lang_dict[st.session_state.sel_lang]
+    T = lang_dict.get(st.session_state.sel_lang, lang_dict["Русский"])
     stories = get_user_stories(st.session_state.user_email)
 
     with st.sidebar:
@@ -389,23 +420,36 @@ else:
         st.markdown(
             f"""
             <div class="sidebar-brand">🌙 NomNom Stories</div>
-            <div class="sidebar-subbrand">{T["sidebar_tagline"]}</div>
+            <div class="sidebar-subbrand">{T.get("sidebar_tagline", "")}</div>
             """,
             unsafe_allow_html=True
         )
 
-        st.success(f'{T["account_label"]}: {st.session_state.user_email}')
+        st.success(f'{T.get("account_label", "Account")}: {st.session_state.user_email}')
 
-        with st.expander(T["sidebar_library"], expanded=False):
+        with st.expander(T.get("sidebar_library", "Stories"), expanded=False):
             render_story_library(stories, T, prefix="side")
 
         st.divider()
 
-        st.markdown(f'<div class="section-label">{T["voice_settings"]}</div>', unsafe_allow_html=True)
-        voice_name = st.selectbox(T["sidebar_voice"], list(T["voices"].keys()), key="voice_select")
-        voice_id = T["voices"][voice_name]
+        st.markdown(
+            f'<div class="section-label">{T.get("voice_settings", "🎙 Voice settings")}</div>',
+            unsafe_allow_html=True
+        )
 
-        if st.button(T["sidebar_new"], use_container_width=True, type="primary", key="sidebar_new_story_btn"):
+        voice_name = st.selectbox(
+            T.get("sidebar_voice", "🔊 Voice"),
+            list(T.get("voices", {}).keys()),
+            key="voice_select"
+        )
+        voice_id = T.get("voices", {}).get(voice_name)
+
+        if st.button(
+            T.get("sidebar_new", "➕ New Story"),
+            use_container_width=True,
+            type="primary",
+            key="sidebar_new_story_btn"
+        ):
             st.session_state.view_story = None
             st.session_state.page_mode = "form"
             st.rerun()
@@ -417,7 +461,7 @@ else:
         top1, top2 = st.columns([1, 6])
 
         with top1:
-            if st.button(T["back_btn"], use_container_width=True, key="back_story_btn"):
+            if st.button(T.get("back_btn", "← Back"), use_container_width=True, key="back_story_btn"):
                 st.session_state.view_story = None
                 st.session_state.page_mode = "form"
                 st.rerun()
@@ -425,9 +469,9 @@ else:
         with top2:
             st.markdown(
                 f"""
-                <div class="hero-badge">{T["ready_story"]}</div>
-                <div class="hero-title" style="font-size: 2.35rem;">{html.escape(s.get('title', T["story_fallback"]))}</div>
-                <div class="hero-subtitle">{subtitle_dict[st.session_state.sel_lang]}</div>
+                <div class="hero-badge">{T.get("ready_story", "📖 Story ready")}</div>
+                <div class="hero-title" style="font-size: 2.35rem;">{html.escape(s.get('title', T.get("story_fallback", "Story")))}</div>
+                <div class="hero-subtitle">{subtitle_dict.get(st.session_state.sel_lang, "")}</div>
                 """,
                 unsafe_allow_html=True
             )
@@ -454,7 +498,7 @@ else:
                 unsafe_allow_html=True
             )
         else:
-            st.warning(T["empty_story_text"])
+            st.warning(T.get("empty_story_text", "Story text is empty."))
 
     else:
         stop_bg_music()
@@ -466,15 +510,21 @@ else:
                 f"""
                 <div class="hero-badge">🌟 NomNom Stories</div>
                 <div class="hero-title">🌙 NomNom Stories</div>
-                <div class="hero-subtitle">{subtitle_dict[st.session_state.sel_lang]}</div>
+                <div class="hero-subtitle">{subtitle_dict.get(st.session_state.sel_lang, "")}</div>
                 """,
                 unsafe_allow_html=True
             )
 
-            st.markdown(f'<div class="section-label">{T["section_for_whom"]}</div>', unsafe_allow_html=True)
-            cn = st.text_input(T["child_name"], value=T["default_child_name"])
+            st.markdown(
+                f'<div class="section-label">{T.get("section_for_whom", "👶 For whom?")}</div>',
+                unsafe_allow_html=True
+            )
+            cn = st.text_input(T.get("child_name", "Child's Name"), value=T.get("default_child_name", "Dasha"))
 
-            st.markdown(f'<div class="section-label">{T["section_language"]}</div>', unsafe_allow_html=True)
+            st.markdown(
+                f'<div class="section-label">{T.get("section_language", "🌍 Language")}</div>',
+                unsafe_allow_html=True
+            )
             lang_list = list(lang_dict.keys())
             new_lang = st.selectbox(
                 "🌍 Language / Язык",
@@ -490,31 +540,40 @@ else:
 
             st.markdown(
                 f"""
-                <div class="soft-info-chip">📍 {T['title']} • {st.session_state.sel_lang}</div>
+                <div class="soft-info-chip">📍 {T.get('title', 'NomNom Stories')} • {st.session_state.sel_lang}</div>
                 """,
                 unsafe_allow_html=True
             )
 
-            st.markdown(f'<div class="section-label">{T["section_skill"]}</div>', unsafe_allow_html=True)
+            st.markdown(
+                f'<div class="section-label">{T.get("section_skill", "🎯 Skill")}</div>',
+                unsafe_allow_html=True
+            )
             skills = st.multiselect(
-                T["skills_label"],
-                T["skills"],
-                default=[T["skills"][0]],
+                T.get("skills_label", "Skills"),
+                T.get("skills", []),
+                default=[T.get("skills", [""])[0]] if T.get("skills") else [],
                 label_visibility="collapsed"
             )
 
-            st.markdown(f'<div class="section-label">{T["section_format"]}</div>', unsafe_allow_html=True)
+            st.markdown(
+                f'<div class="section-label">{T.get("section_format", "🎧 Format")}</div>',
+                unsafe_allow_html=True
+            )
             c1, c2 = st.columns(2)
             with c1:
-                use_img = st.checkbox(T["opt_img"], value=True, key="use_img_checkbox")
+                use_img = st.checkbox(T.get("opt_img", "🎨 Text + Image"), value=True, key="use_img_checkbox")
             with c2:
-                use_audio = st.checkbox(T["opt_audio"], value=False, key="use_audio_checkbox")
+                use_audio = st.checkbox(T.get("opt_audio", "🎧 Audio Only"), value=False, key="use_audio_checkbox")
 
-            st.markdown(f'<div class="section-label">{T["section_duration"]}</div>', unsafe_allow_html=True)
+            st.markdown(
+                f'<div class="section-label">{T.get("section_duration", "⏳ Duration")}</div>',
+                unsafe_allow_html=True
+            )
             t_cols = st.columns(3)
             for i, t in enumerate([3, 5, 10]):
                 if t_cols[i].button(
-                    f'{t} {T["duration_btn_suffix"]}',
+                    f'{t} {T.get("duration_btn_suffix", "min")}',
                     key=f"t_{t}",
                     type="primary" if st.session_state.time_val == t else "secondary",
                     use_container_width=True
@@ -522,11 +581,19 @@ else:
                     st.session_state.time_val = t
                     st.rerun()
 
-            st.markdown(f'<div class="section-label">{T["section_details"]}</div>', unsafe_allow_html=True)
-            details = st.text_area(T["details"], label_visibility="collapsed")
+            st.markdown(
+                f'<div class="section-label">{T.get("section_details", "✍️ Details")}</div>',
+                unsafe_allow_html=True
+            )
+            details = st.text_area(T.get("details", "Story details"), label_visibility="collapsed")
 
-            if st.button(T["btn_create"], type="primary", use_container_width=True, key="create_story_btn"):
-                with st.spinner(T["spinner_magic"]):
+            if st.button(
+                T.get("btn_create", "🚀 Create"),
+                type="primary",
+                use_container_width=True,
+                key="create_story_btn"
+            ):
+                with st.spinner(T.get("spinner_magic", "✨ Creating...")):
                     try:
                         full_txt = generate_story_text(
                             cn,
@@ -540,7 +607,7 @@ else:
                             full_txt = full_txt.strip()
 
                             first_line, sep, rest = full_txt.partition("\n")
-                            ttl = first_line.strip() or T["story_fallback"]
+                            ttl = first_line.strip() or T.get("story_fallback", "Story")
                             story_body = rest.strip() if rest.strip() else full_txt
 
                             url = generate_image(ttl) if use_img else None
@@ -561,8 +628,8 @@ else:
                                 current_story["story_text"] = story_body
                                 current_story["image_url"] = url
 
-                                if use_audio:
-                                    with st.spinner(T["spinner_voice"]):
+                                if use_audio and voice_id:
+                                    with st.spinner(T.get("spinner_voice", "🔊 Generating voice...")):
                                         audio_b64 = get_speech_b64(story_body, voice_id)
                                         if audio_b64:
                                             update_audio(new_id, audio_b64)
@@ -572,9 +639,9 @@ else:
                                 st.session_state.page_mode = "view"
                                 st.rerun()
                             else:
-                                st.error(T["error_save_story"])
+                                st.error(T.get("error_save_story", "Failed to save story."))
                         else:
-                            st.error(T["error_gen_story"])
+                            st.error(T.get("error_gen_story", "Failed to generate story."))
 
                     except Exception as e:
-                        st.error(f'{T["error_prefix"]}: {e}')
+                        st.error(f'{T.get("error_prefix", "Error")}: {e}')
