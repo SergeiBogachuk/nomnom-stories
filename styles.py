@@ -3,31 +3,6 @@ import streamlit as st
 def apply_styles():
     st.markdown("""
         <style>
-        /* ===== Кнопки сказок в библиотеке ===== */
-        [data-testid="stSidebar"] [data-testid="stExpander"] .stButton > button {
-            background: rgba(15, 23, 42, 0.92) !important;
-            color: #eef6ff !important;
-            border: 1px solid rgba(125, 211, 252, 0.20) !important;
-            border-radius: 14px !important;
-            min-height: 44px !important;
-            height: 44px !important;
-            box-shadow: none !important;
-        }
-
-        [data-testid="stSidebar"] [data-testid="stExpander"] .stButton > button:hover {
-            background: rgba(30, 41, 59, 0.96) !important;
-            color: #ffffff !important;
-            border-color: rgba(125, 211, 252, 0.40) !important;
-        }
-
-        [data-testid="stSidebar"] [data-testid="stExpander"] .stButton > button p {
-            color: #eef6ff !important;
-            white-space: nowrap !important;
-            overflow: hidden !important;
-            text-overflow: ellipsis !important;
-            margin: 0 !important;
-        }
-
         /* Маленькая кнопка удаления */
         [data-testid="stSidebar"] [data-testid="stExpander"] div[data-testid="column"]:last-child .stButton > button {
             min-width: 44px !important;
