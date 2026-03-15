@@ -146,7 +146,7 @@ else:
 
             details = st.text_area(T['details'])
 
-           if st.button(T['btn_create'], type="primary", use_container_width=True):
+            if st.button(T['btn_create'], type="primary", use_container_width=True):
                 with st.spinner("✨ Колдуем..."):
                     try:
                         # 1. Генерируем текст
