@@ -16,25 +16,104 @@ st.set_page_config(
 apply_styles()
 
 
-def get_bg_music_html():
+def get_bg_music_b64():
     try:
         with open("bg_music.mp3", "rb") as f:
-            data = base64.b64encode(f.read()).decode()
-            return f'''
-                <audio autoplay loop id="bg_music">
-                    <source src="data:audio/mp3;base64,{data}" type="audio/mp3">
-                </audio>
-                <script>
-                    document.getElementById("bg_music").volume = 0.1;
-                </script>
-            '''
+            return base64.b64encode(f.read()).decode()
     except:
-        return ""
+        return None
+
+
+def get_story_audio_html(story_audio_b64=None):
+    bg_b64 = get_bg_music_b64()
+
+    bg_audio = ""
+    if bg_b64:
+        bg_audio = f"""
+        <audio id="bg_music" autoplay loop playsinline>
+            <source src="data:audio/mp3;base64,{bg_b64}" type="audio/mp3">
+        </audio>
+        """
+
+    story_audio = ""
+    if story_audio_b64:
+        story_audio = f"""
+        <audio id="story_audio" controls playsinline style="width:100%; margin-top:8px; border-radius:16px;">
+            <source src="data:audio/mp3;base64,{story_audio_b64}" type="audio/mp3">
+        </audio>
+        """
+
+    return f"""
+    {bg_audio}
+    {story_audio}
+    <script>
+        const bg = document.getElementById("bg_music");
+        const story = document.getElementById("story_audio");
+
+        function startBg() {{
+            if (bg) {{
+                bg.volume = 0.08;
+                bg.play().catch(() => {{}});
+            }}
+        }}
+
+        startBg();
+        document.addEventListener("click", startBg, {{ once: true }});
+        document.addEventListener("touchstart", startBg, {{ once: true }});
+
+        if (bg && story) {{
+            story.addEventListener("play", () => {{
+                bg.volume = 0.05;
+                bg.play().catch(() => {{}});
+            }});
+
+            story.addEventListener("pause", () => {{
+                bg.volume = 0.08;
+            }});
+
+            story.addEventListener("ended", () => {{
+                bg.volume = 0.08;
+            }});
+        }}
+    </script>
+    """
 
 
 def short_story_title(title, max_len=24):
     title = (title or "Сказка").replace("\n", " ").strip()
     return title if len(title) <= max_len else title[:max_len - 1] + "…"
+
+
+def render_story_library(stories, prefix="lib"):
+    if not stories or not getattr(stories, "data", None):
+        st.caption("Пока нет сохранённых сказок")
+        return
+
+    for s in stories.data:
+        full_title = s.get("title") or "Сказка"
+        short_title = short_story_title(full_title)
+
+        col_story, col_del = st.columns([6, 1], gap="small")
+
+        with col_story:
+            if st.button(
+                short_title,
+                key=f"{prefix}_s_{s['id']}",
+                use_container_width=True,
+                help=full_title
+            ):
+                st.session_state.view_story = s
+                st.rerun()
+
+        with col_del:
+            if st.button("🗑", key=f"{prefix}_del_{s['id']}", help="Удалить"):
+                if delete_story(s["id"]):
+                    if (
+                        st.session_state.view_story
+                        and st.session_state.view_story.get("id") == s["id"]
+                    ):
+                        st.session_state.view_story = None
+                    st.rerun()
 
 
 lang_dict = {
@@ -145,6 +224,7 @@ else:
         st.session_state.sel_lang = "Русский"
 
     T = lang_dict[st.session_state.sel_lang]
+    stories = get_user_stories(st.session_state.user_email)
 
     with st.sidebar:
         try:
@@ -162,34 +242,8 @@ else:
 
         st.success(f"Аккаунт: {st.session_state.user_email}")
 
-        with st.expander(T["sidebar_library"], expanded=True):
-            stories = get_user_stories(st.session_state.user_email)
-
-            for s in stories.data:
-                full_title = s.get("title") or "Сказка"
-                short_title = short_story_title(full_title)
-
-                col_story, col_del = st.columns([6, 1], gap="small")
-
-                with col_story:
-                    if st.button(
-                        short_title,
-                        key=f"s_{s['id']}",
-                        use_container_width=True,
-                        help=full_title
-                    ):
-                        st.session_state.view_story = s
-                        st.rerun()
-
-                with col_del:
-                    if st.button("🗑", key=f"del_{s['id']}", help="Удалить"):
-                        if delete_story(s["id"]):
-                            if (
-                                st.session_state.view_story
-                                and st.session_state.view_story.get("id") == s["id"]
-                            ):
-                                st.session_state.view_story = None
-                            st.rerun()
+        with st.expander(T["sidebar_library"], expanded=False):
+            render_story_library(stories, prefix="side")
 
         st.divider()
 
@@ -220,10 +274,10 @@ else:
                 unsafe_allow_html=True
             )
 
-        components.html(get_bg_music_html(), height=0)
-
         if s.get("audio_base64"):
-            st.audio(base64.b64decode(s["audio_base64"]))
+            components.html(get_story_audio_html(s["audio_base64"]), height=95)
+        else:
+            components.html(get_story_audio_html(), height=0)
 
         if s.get("image_url"):
             st.image(s["image_url"], use_container_width=True)
@@ -258,6 +312,10 @@ else:
                 """,
                 unsafe_allow_html=True
             )
+
+            st.markdown('<div class="mobile-library-title">📚 Мои сказки</div>', unsafe_allow_html=True)
+            with st.expander("Открыть библиотеку сказок", expanded=False):
+                render_story_library(stories, prefix="main")
 
             st.markdown('<div class="section-label">👶 Для кого сказка?</div>', unsafe_allow_html=True)
             cn = st.text_input(T["child_name"], value="Даша")
