@@ -43,6 +43,15 @@ def apply_styles():
             background: rgba(34, 197, 94, 0.14) !important;
         }
 
+        [data-testid="stSidebar"] .stButton > button {
+            height: 46px !important;
+        }
+
+        [data-testid="stSidebar"] .stSelectbox label,
+        [data-testid="stSidebar"] .stCheckbox label {
+            font-weight: 700 !important;
+        }
+
         /* ===== Заголовки ===== */
         h1 {
             text-align: center !important;
@@ -75,6 +84,60 @@ def apply_styles():
             color: #dbeafe;
             opacity: 0.92;
             margin-bottom: 1.6rem;
+        }
+
+        .hero-badge {
+            width: fit-content;
+            margin: 0 auto 12px auto;
+            padding: 8px 14px;
+            border-radius: 999px;
+            background: rgba(56, 189, 248, 0.12);
+            border: 1px solid rgba(125, 211, 252, 0.24);
+            color: #dff4ff;
+            font-size: 0.92rem;
+            font-weight: 700;
+            letter-spacing: 0.01em;
+            box-shadow: 0 8px 24px rgba(2, 8, 23, 0.12);
+        }
+
+        .sidebar-brand {
+            font-size: 1.25rem;
+            font-weight: 800;
+            color: #ffffff;
+            margin-top: 6px;
+            margin-bottom: 2px;
+        }
+
+        .sidebar-subbrand {
+            font-size: 0.92rem;
+            color: #cfe8ff;
+            opacity: 0.85;
+            margin-bottom: 18px;
+        }
+
+        .section-label {
+            margin-top: 8px;
+            margin-bottom: 8px;
+            font-size: 0.98rem;
+            font-weight: 700;
+            color: #e9f6ff !important;
+            letter-spacing: 0.01em;
+        }
+
+        .soft-info-chip {
+            width: fit-content;
+            margin: 8px auto 16px auto;
+            padding: 10px 14px;
+            border-radius: 16px;
+            background: rgba(59, 130, 246, 0.16);
+            border: 1px solid rgba(125, 211, 252, 0.24);
+            color: #eaf6ff;
+            font-weight: 600;
+            box-shadow: 0 10px 24px rgba(2, 8, 23, 0.14);
+        }
+
+        .story-shell {
+            margin-top: 18px;
         }
 
         /* ===== Обычный текст ===== */
@@ -171,7 +234,7 @@ def apply_styles():
             background: rgba(30, 41, 59, 0.88) !important;
         }
 
-        /* ===== Info / success ===== */
+        /* ===== Info / success / alerts ===== */
         .stInfo, .stSuccess, .stWarning, .stError {
             border-radius: 18px !important;
             border: 1px solid rgba(125, 211, 252, 0.18) !important;
@@ -181,14 +244,14 @@ def apply_styles():
             background: rgba(59, 130, 246, 0.15) !important;
         }
 
-        /* ===== Раскрывашка библиотеки ===== */
+        /* ===== Expander ===== */
         [data-testid="stExpander"] {
             border: 1px solid rgba(125, 211, 252, 0.16) !important;
             border-radius: 18px !important;
             background: rgba(15, 23, 42, 0.35) !important;
         }
 
-        /* ===== Линии-разделители ===== */
+        /* ===== Разделители ===== */
         hr {
             border-color: rgba(125, 211, 252, 0.16) !important;
         }
