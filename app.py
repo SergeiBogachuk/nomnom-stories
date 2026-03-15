@@ -99,11 +99,25 @@ lang_dict = {
     }
 }
 
+subtitle_dict = {
+    "Русский": "Сказки на ночь с магией, добротой и уютом ✨",
+    "English": "Bedtime stories filled with magic, kindness, and wonder ✨",
+    "Română": "Povești de noapte pline de magie, bunătate și liniște ✨"
+}
+
 
 if not st.session_state.get("logged_in", False):
     _, center, _ = st.columns([1, 2, 1])
+
     with center:
-        st.title("🌟 Вход")
+        st.markdown(
+            """
+            <div class="hero-title">🌙 NomNom Stories</div>
+            <div class="hero-subtitle">Вход в волшебную библиотеку сказок ✨</div>
+            """,
+            unsafe_allow_html=True
+        )
+
         with st.form("login_form"):
             e = st.text_input("Email")
             p = st.text_input("Пароль", type="password")
@@ -150,14 +164,21 @@ else:
         voice_name = st.selectbox(T["sidebar_voice"], list(T["voices"].keys()))
         voice_id = T["voices"][voice_name]
 
-        if st.button(T["sidebar_new"]):
+        if st.button(T["sidebar_new"], use_container_width=True):
             st.session_state.view_story = None
             st.rerun()
 
     if st.session_state.view_story:
         s = st.session_state.view_story
 
-        st.title(f"📖 {s.get('title', 'Сказка')}")
+        st.markdown(
+            f"""
+            <div class="hero-title" style="font-size: 2.4rem;">📖 {html.escape(s.get('title', 'Сказка'))}</div>
+            <div class="hero-subtitle">{subtitle_dict[st.session_state.sel_lang]}</div>
+            """,
+            unsafe_allow_html=True
+        )
+
         components.html(get_bg_music_html(), height=0)
 
         if s.get("audio_base64"):
@@ -173,17 +194,7 @@ else:
             safe_story = html.escape(story_text).replace("\n", "<br>")
             st.markdown(
                 f"""
-                <div class="story-output" style="
-                    white-space: pre-wrap;
-                    color: #222222;
-                    background: #ffffff;
-                    padding: 20px;
-                    border-radius: 16px;
-                    line-height: 1.7;
-                    font-size: 18px;
-                    box-shadow: 0 2px 10px rgba(0,0,0,0.05);
-                    margin-top: 16px;
-                ">
+                <div class="story-output">
                     {safe_story}
                 </div>
                 """,
@@ -196,13 +207,17 @@ else:
         _, center, _ = st.columns([1, 2, 1])
 
         with center:
-            st.title(T["title"])
+            st.markdown(
+                f"""
+                <div class="hero-title">🌙 NomNom Stories</div>
+                <div class="hero-subtitle">{subtitle_dict[st.session_state.sel_lang]}</div>
+                """,
+                unsafe_allow_html=True
+            )
 
             cn = st.text_input(T["child_name"], value="Даша")
 
             lang_list = list(lang_dict.keys())
-            st.info(f"📍 {T['title']} - {st.session_state.sel_lang}")
-
             new_lang = st.selectbox(
                 "🌍 Language / Язык",
                 lang_list,
@@ -213,6 +228,8 @@ else:
             if new_lang != st.session_state.sel_lang:
                 st.session_state.sel_lang = new_lang
                 st.rerun()
+
+            st.info(f"📍 {T['title']} - {st.session_state.sel_lang}")
 
             skills = st.multiselect(T["skills_label"], T["skills"], default=[T["skills"][0]])
 
@@ -284,7 +301,6 @@ else:
                                 st.rerun()
                             else:
                                 st.error("Не удалось сохранить сказку.")
-
                         else:
                             st.error("Не удалось сгенерировать текст сказки.")
 
