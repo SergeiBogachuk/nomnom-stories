@@ -3,7 +3,6 @@ import streamlit as st
 def apply_styles():
     st.markdown("""
         <style>
-        /* 1. ИЗМЕНИЛИ ТОЛЬКО ЭТО: Добавили фоновое изображение вместо простого цвета */
         .stApp { 
             background: linear-gradient(rgba(10, 15, 30, 0.8), rgba(10, 15, 30, 0.8)), 
                         url("https://images.unsplash.com/photo-1534796636912-3b95b3ab5986?q=80&w=2000&auto=format&fit=crop") !important;
@@ -12,7 +11,6 @@ def apply_styles():
             color: #f8fafc; 
         }
         
-        /* Кнопка сайдбара */
         button[kind="headerNoPadding"] {
             background-color: #38bdf8 !important;
             border-radius: 5px !important;
@@ -24,7 +22,6 @@ def apply_styles():
             border-right: 2px solid #38bdf8; 
         }
 
-        /* ЦЕНТРИРОВАНИЕ И ШИРИНА ПОЛЕЙ */
         [data-testid="stVerticalBlock"] > div:has(div.stTextInput), 
         [data-testid="stVerticalBlock"] > div:has(div.stTextArea),
         .stForm {
@@ -33,13 +30,16 @@ def apply_styles():
             margin-right: auto !important;
         }
 
-        /* Делаем текст ярким */
-        p, label, span, .stMarkdown { 
+        /* Обычный интерфейсный текст */
+        p, label, span { 
             color: #ffffff !important; 
             font-weight: 600 !important;
         }
 
-        /* Кнопки */
+        .stMarkdown { 
+            color: #ffffff !important; 
+        }
+
         div.stButton > button[kind="primary"], 
         button[kind="primaryFormSubmit"] {
             background: linear-gradient(135deg, #38bdf8 0%, #1e40af 100%) !important;
@@ -54,8 +54,9 @@ def apply_styles():
             border: 1px solid #38bdf8; 
         }
 
+        /* Карточка сказки */
         .story-output { 
-            background: #ffffff; 
+            background: #ffffff !important; 
             color: #1e293b !important; 
             padding: 40px; 
             border-radius: 30px; 
@@ -63,6 +64,26 @@ def apply_styles():
             line-height: 1.8; 
             max-width: 800px;
             margin: auto;
+            white-space: pre-wrap;
+            box-shadow: 0 4px 18px rgba(0,0,0,0.12);
+        }
+
+        /* ВАЖНО: принудительно делаем весь текст внутри сказки тёмным */
+        .story-output,
+        .story-output p,
+        .story-output span,
+        .story-output div,
+        .story-output strong,
+        .story-output em,
+        .story-output li,
+        .story-output h1,
+        .story-output h2,
+        .story-output h3,
+        .story-output h4,
+        .story-output h5,
+        .story-output h6 {
+            color: #1e293b !important;
+            font-weight: 400 !important;
         }
         </style>
         """, unsafe_allow_html=True)
