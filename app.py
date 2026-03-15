@@ -54,7 +54,7 @@ lang_dict = {
     }
 }
 
-# --- ВХОД ---
+# --- ЛОГИКА ВХОДА ---
 if not st.session_state.get("logged_in", False):
     _, center, _ = st.columns([1, 2, 1]) 
     with center:
@@ -68,11 +68,14 @@ if not st.session_state.get("logged_in", False):
                     st.rerun()
                 else: st.error("Ошибка входа")
 else:
+    # --- ИНИЦИАЛИЗАЦИЯ ---
     if 'time_val' not in st.session_state: st.session_state.time_val = 5
     if 'view_story' not in st.session_state: st.session_state.view_story = None
     if 'sel_lang' not in st.session_state: st.session_state.sel_lang = "Русский"
+    
     T = lang_dict[st.session_state.sel_lang]
 
+    # --- САЙДБАР ---
     with st.sidebar:
         st.success(f"Аккаунт: {st.session_state.user_email}")
         with st.expander(T['sidebar_library']):
@@ -84,10 +87,11 @@ else:
                         st.session_state.view_story = s
                         st.rerun()
                 with col_del:
-                    if st.button("🗑️", key=f"del_{s['id']}"):
+                    if st.button("🗑️", key=f"del_{s['id']}", help="Удалить"):
                         if delete_story(s['id']):
                             st.session_state.view_story = None
                             st.rerun()
+
         st.divider()
         voice_name = st.selectbox(T['sidebar_voice'], list(T['voices'].keys()))
         voice_id = T['voices'][voice_name]
@@ -95,14 +99,18 @@ else:
             st.session_state.view_story = None
             st.rerun()
 
+    # --- ЦЕНТР ---
     if st.session_state.view_story:
         s = st.session_state.view_story
         st.title(f"📖 {s.get('title')}")
         components.html(get_bg_music_html(), height=0)
+        
         if s.get('audio_base64'):
             st.audio(base64.b64decode(s['audio_base64']))
+        
         if s.get('image_url'): 
             st.image(s['image_url'], use_container_width=True)
+            
         st.markdown(f'<div class="story-output">{s["story_text"]}</div>', unsafe_allow_html=True)
             
     else:
@@ -111,52 +119,63 @@ else:
             st.title(T['title'])
             cn = st.text_input(T['child_name'], value="Даша")
             
+            # ВЫДЕЛЕНИЕ ЯЗЫКА
             lang_list = list(lang_dict.keys())
-            st.info(f"📍 {st.session_state.sel_lang}")
-            new_lang = st.selectbox("🌍 Language", lang_list, index=lang_list.index(st.session_state.sel_lang))
+            st.info(f"📍 {T['title']} - {st.session_state.sel_lang}")
+            new_lang = st.selectbox("🌍 Language / Язык", lang_list, index=lang_list.index(st.session_state.sel_lang), key="lang_selector_center")
+            
             if new_lang != st.session_state.sel_lang:
                 st.session_state.sel_lang = new_lang
                 st.rerun()
             
             skills = st.multiselect(T['skills_label'], T['skills'], default=[T['skills'][0]])
+            
             c1, c2 = st.columns(2)
             with c1: use_img = st.checkbox(T['opt_img'], value=True)
             with c2: use_audio = st.checkbox(T['opt_audio'], value=False)
+
             st.write(T['duration'])
             t_cols = st.columns(3)
             for i, t in enumerate([3, 5, 10]):
-                if t_cols[i].button(f"{t} min", key=f"t_{t}", type="primary" if st.session_state.time_val == t else "secondary"):
+                if t_cols[i].button(f"{t} min", key=f"t_{t}", type="primary" if st.session_state.time_val == t else "secondary", use_container_width=True):
                     st.session_state.time_val = t
                     st.rerun()
+
             details = st.text_area(T['details'])
 
+            # --- ГЕНЕРАЦИЯ ---
             if st.button(T['btn_create'], type="primary", use_container_width=True):
-                with st.spinner("✨..."):
+                with st.spinner("✨ Колдуем..."):
                     try:
-                        full_txt = generate_story_text(cn, st.session_state.sel_lang, skills, details, st.session_state.time_val)
-                        if full_txt:
-                            lines = full_txt.split('\n')
-                            ttl = lines[0].strip()
-                            # Гарантируем, что текст сказки не пустой
-                            story_content = "\n".join(lines[1:]).strip() if len(lines) > 1 else full_txt
-                            
+                        # 1. Сначала текст
+                        txt = generate_story_text(cn, st.session_state.sel_lang, skills, details, st.session_state.time_val)
+                        if txt:
+                            ttl = txt.split('\n')[0].strip()
+                            # 2. Картинка (если выбрана)
                             url = generate_image(ttl) if use_img else None
                             
+                            # 3. Сохранение (без аудио)
                             res = save_story({
                                 "user_email": st.session_state.user_email, 
                                 "child_name": cn, 
                                 "title": ttl, 
-                                "story_text": story_content, 
+                                "story_text": txt, 
                                 "image_url": url
                             })
                             
                             if res and len(res.data) > 0:
-                                curr = res.data[0]
+                                current_story = res.data[0]
+                                new_id = current_story['id']
+                                
+                                # 4. Озвучка (если выбрана)
                                 if use_audio:
-                                    audio_b64 = get_speech_b64(story_content, voice_id)
-                                    if audio_b64:
-                                        update_audio(curr['id'], audio_b64)
-                                        curr['audio_base64'] = audio_b64
-                                st.session_state.view_story = curr
+                                    with st.spinner("🔊 Озвучиваем..."):
+                                        audio_b64 = get_speech_b64(txt, voice_id)
+                                        if audio_b64:
+                                            update_audio(new_id, audio_b64)
+                                            current_story['audio_base64'] = audio_b64
+                                
+                                st.session_state.view_story = current_story
                                 st.rerun()
-                    except Exception as e: st.error(f"Error: {e}")
+                    except Exception as e: 
+                        st.error(f"Ошибка: {e}")
