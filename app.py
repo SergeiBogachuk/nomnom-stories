@@ -24,59 +24,86 @@ def get_bg_music_b64():
         return None
 
 
-def get_story_audio_html(story_audio_b64=None):
+def mount_bg_music():
     bg_b64 = get_bg_music_b64()
+    if not bg_b64:
+        return
 
-    bg_audio = ""
-    if bg_b64:
-        bg_audio = f"""
-        <audio id="bg_music" autoplay loop playsinline>
-            <source src="data:audio/mp3;base64,{bg_b64}" type="audio/mp3">
-        </audio>
-        """
-
-    story_audio = ""
-    if story_audio_b64:
-        story_audio = f"""
-        <audio id="story_audio" controls playsinline style="width:100%; margin-top:8px; border-radius:16px;">
-            <source src="data:audio/mp3;base64,{story_audio_b64}" type="audio/mp3">
-        </audio>
-        """
-
-    return f"""
-    {bg_audio}
-    {story_audio}
-    <script>
-        const bg = document.getElementById("bg_music");
-        const story = document.getElementById("story_audio");
-
-        function startBg() {{
-            if (bg) {{
-                bg.volume = 0.08;
-                bg.play().catch(() => {{}});
+    components.html(
+        f"""
+        <script>
+        (function() {{
+            let docRef = document;
+            try {{
+                if (window.parent && window.parent.document) {{
+                    docRef = window.parent.document;
+                }}
+            }} catch (e) {{
+                docRef = document;
             }}
-        }}
 
-        startBg();
-        document.addEventListener("click", startBg, {{ once: true }});
-        document.addEventListener("touchstart", startBg, {{ once: true }});
+            let bg = docRef.getElementById("nomnom-bg-music");
+            if (!bg) {{
+                bg = docRef.createElement("audio");
+                bg.id = "nomnom-bg-music";
+                bg.src = "data:audio/mp3;base64,{bg_b64}";
+                bg.loop = true;
+                bg.preload = "auto";
+                bg.style.display = "none";
+                docRef.body.appendChild(bg);
+            }}
 
-        if (bg && story) {{
-            story.addEventListener("play", () => {{
-                bg.volume = 0.05;
-                bg.play().catch(() => {{}});
-            }});
+            bg.volume = 0.08;
 
-            story.addEventListener("pause", () => {{
-                bg.volume = 0.08;
-            }});
+            function startBg() {{
+                try {{
+                    bg.volume = 0.08;
+                    const p = bg.play();
+                    if (p) p.catch(() => {{}});
+                }} catch (e) {{}}
+            }}
 
-            story.addEventListener("ended", () => {{
-                bg.volume = 0.08;
-            }});
-        }}
-    </script>
-    """
+            if (!docRef.body.dataset.nomnomBgBound) {{
+                ["click", "touchstart", "keydown"].forEach(function(evt) {{
+                    docRef.addEventListener(evt, startBg);
+                }});
+                docRef.body.dataset.nomnomBgBound = "1";
+            }}
+
+            startBg();
+        }})();
+        </script>
+        """,
+        height=0
+    )
+
+
+def stop_bg_music():
+    components.html(
+        """
+        <script>
+        (function() {
+            let docRef = document;
+            try {
+                if (window.parent && window.parent.document) {
+                    docRef = window.parent.document;
+                }
+            } catch (e) {
+                docRef = document;
+            }
+
+            const bg = docRef.getElementById("nomnom-bg-music");
+            if (bg) {
+                try {
+                    bg.pause();
+                    bg.currentTime = 0;
+                } catch (e) {}
+            }
+        })();
+        </script>
+        """,
+        height=0
+    )
 
 
 def short_story_title(title, max_len=24):
@@ -98,11 +125,12 @@ def render_story_library(stories, prefix="lib"):
         with col_story:
             if st.button(
                 short_title,
-                key=f"{prefix}_s_{s['id']}",
+                key=f"{prefix}_story_{s['id']}",
                 use_container_width=True,
                 help=full_title
             ):
                 st.session_state.view_story = s
+                st.session_state.page_mode = "view"
                 st.rerun()
 
         with col_del:
@@ -113,6 +141,7 @@ def render_story_library(stories, prefix="lib"):
                         and st.session_state.view_story.get("id") == s["id"]
                     ):
                         st.session_state.view_story = None
+                        st.session_state.page_mode = "form"
                     st.rerun()
 
 
@@ -165,7 +194,7 @@ lang_dict = {
         "child_name": "Numele copilului",
         "skills_label": "🎯 Ce învățăm astăzi?",
         "duration": "⏳ Durată:",
-        "details": "✍️ Despre ce va fi povestea?",
+        "details": "✍️ Despre ce va fi povesteа?",
         "btn_create": "🚀 CREEAZĂ MAGIE ✨",
         "sidebar_library": "📚 Poveștile mele",
         "sidebar_voice": "🔊 Voce",
@@ -190,9 +219,20 @@ subtitle_dict = {
 }
 
 
-if not st.session_state.get("logged_in", False):
-    _, center, _ = st.columns([1, 2, 1])
+if "time_val" not in st.session_state:
+    st.session_state.time_val = 5
+if "view_story" not in st.session_state:
+    st.session_state.view_story = None
+if "sel_lang" not in st.session_state:
+    st.session_state.sel_lang = "Русский"
+if "page_mode" not in st.session_state:
+    st.session_state.page_mode = "form"
 
+
+if not st.session_state.get("logged_in", False):
+    stop_bg_music()
+
+    _, center, _ = st.columns([1, 2, 1])
     with center:
         st.markdown(
             """
@@ -211,18 +251,12 @@ if not st.session_state.get("logged_in", False):
                 if check_user(e, p):
                     st.session_state.logged_in = True
                     st.session_state.user_email = e
+                    st.session_state.page_mode = "form"
                     st.rerun()
                 else:
                     st.error("Ошибка входа")
 
 else:
-    if "time_val" not in st.session_state:
-        st.session_state.time_val = 5
-    if "view_story" not in st.session_state:
-        st.session_state.view_story = None
-    if "sel_lang" not in st.session_state:
-        st.session_state.sel_lang = "Русский"
-
     T = lang_dict[st.session_state.sel_lang]
     stories = get_user_stories(st.session_state.user_email)
 
@@ -248,20 +282,24 @@ else:
         st.divider()
 
         st.markdown('<div class="section-label">🎙 Настройки голоса</div>', unsafe_allow_html=True)
-        voice_name = st.selectbox(T["sidebar_voice"], list(T["voices"].keys()))
+        voice_name = st.selectbox(T["sidebar_voice"], list(T["voices"].keys()), key="voice_select")
         voice_id = T["voices"][voice_name]
 
-        if st.button(T["sidebar_new"], use_container_width=True, type="primary"):
+        if st.button(T["sidebar_new"], use_container_width=True, type="primary", key="sidebar_new_story_btn"):
             st.session_state.view_story = None
+            st.session_state.page_mode = "form"
             st.rerun()
 
-    if st.session_state.view_story:
+    if st.session_state.page_mode == "view" and st.session_state.view_story:
         s = st.session_state.view_story
+        mount_bg_music()
 
         top1, top2 = st.columns([1, 6])
+
         with top1:
-            if st.button("← Назад", use_container_width=True):
+            if st.button("← Назад", use_container_width=True, key="back_story_btn"):
                 st.session_state.view_story = None
+                st.session_state.page_mode = "form"
                 st.rerun()
 
         with top2:
@@ -275,9 +313,7 @@ else:
             )
 
         if s.get("audio_base64"):
-            components.html(get_story_audio_html(s["audio_base64"]), height=95)
-        else:
-            components.html(get_story_audio_html(), height=0)
+            st.audio(base64.b64decode(s["audio_base64"]))
 
         if s.get("image_url"):
             st.image(s["image_url"], use_container_width=True)
@@ -301,6 +337,8 @@ else:
             st.warning("Текст сказки пустой или не сохранился.")
 
     else:
+        stop_bg_music()
+
         _, center, _ = st.columns([1, 2, 1])
 
         with center:
@@ -352,9 +390,9 @@ else:
             st.markdown('<div class="section-label">🎧 Формат</div>', unsafe_allow_html=True)
             c1, c2 = st.columns(2)
             with c1:
-                use_img = st.checkbox(T["opt_img"], value=True)
+                use_img = st.checkbox(T["opt_img"], value=True, key="use_img_checkbox")
             with c2:
-                use_audio = st.checkbox(T["opt_audio"], value=False)
+                use_audio = st.checkbox(T["opt_audio"], value=False, key="use_audio_checkbox")
 
             st.markdown('<div class="section-label">⏳ Длительность</div>', unsafe_allow_html=True)
             t_cols = st.columns(3)
@@ -371,7 +409,7 @@ else:
             st.markdown('<div class="section-label">✍️ Детали сюжета</div>', unsafe_allow_html=True)
             details = st.text_area(T["details"], label_visibility="collapsed")
 
-            if st.button(T["btn_create"], type="primary", use_container_width=True):
+            if st.button(T["btn_create"], type="primary", use_container_width=True, key="create_story_btn"):
                 with st.spinner("✨ Колдуем..."):
                     try:
                         full_txt = generate_story_text(
@@ -415,6 +453,7 @@ else:
                                             current_story["audio_base64"] = audio_b64
 
                                 st.session_state.view_story = current_story
+                                st.session_state.page_mode = "view"
                                 st.rerun()
                             else:
                                 st.error("Не удалось сохранить сказку.")
