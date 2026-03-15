@@ -59,15 +59,16 @@ else:
         with st.expander(T['sidebar_library']):
             stories = get_user_stories(st.session_state.user_email)
             for s in stories.data:
-                if st.button(s.get('title') or "Сказка", key=f"s_{s['id']}", use_container_width=True):
-                    st.session_state.view_story = s
-                    st.rerun()
-        st.divider()
-        voice_name = st.selectbox(T['sidebar_voice'], list(T['voices'].keys()))
-        voice_id = T['voices'][voice_name]
-        if st.button(T['sidebar_new']):
-            st.session_state.view_story = None
-            st.rerun()
+                col_story, col_del = st.columns([4, 1])
+                with col_story:
+                    if st.button(s.get('title') or "Сказка", key=f"s_{s['id']}", use_container_width=True):
+                        st.session_state.view_story = s
+                        st.rerun()
+                with col_del:
+                    if st.button("🗑️", key=f"del_{s['id']}", help="Удалить сказку"):
+                        if delete_story(s['id']):
+                            st.session_state.view_story = None
+                            st.rerun()
 
     if st.session_state.view_story:
         # Экран готовой сказки
