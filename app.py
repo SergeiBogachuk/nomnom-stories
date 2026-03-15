@@ -14,8 +14,76 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 apply_styles()
+st.set_page_config(
+    page_title="NomNom Stories",
+    page_icon="🌙",
+    layout="wide",
+    initial_sidebar_state="expanded"
+)
+apply_styles()
 
+def inject_app_icons():
+    try:
+        with open("logo.jpg", "rb") as f:
+            icon_b64 = base64.b64encode(f.read()).decode()
 
+        components.html(
+            f"""
+            <script>
+            (function() {{
+                let docRef = document;
+                try {{
+                    if (window.parent && window.parent.document) {{
+                        docRef = window.parent.document;
+                    }}
+                }} catch (e) {{
+                    docRef = document;
+                }}
+
+                const head = docRef.head;
+                const iconHref = "data:image/jpeg;base64,{icon_b64}";
+
+                function upsertLink(rel, sizes="") {{
+                    let link = head.querySelector(`link[rel="${{rel}}"]`);
+                    if (!link) {{
+                        link = docRef.createElement("link");
+                        link.rel = rel;
+                        head.appendChild(link);
+                    }}
+                    link.href = iconHref;
+                    if (sizes) {{
+                        link.setAttribute("sizes", sizes);
+                    }}
+                }}
+
+                function upsertMeta(name, content) {{
+                    let meta = head.querySelector(`meta[name="${{name}}"]`);
+                    if (!meta) {{
+                        meta = docRef.createElement("meta");
+                        meta.name = name;
+                        head.appendChild(meta);
+                    }}
+                    meta.content = content;
+                }}
+
+                upsertLink("icon", "32x32");
+                upsertLink("shortcut icon");
+                upsertLink("apple-touch-icon", "180x180");
+
+                upsertMeta("apple-mobile-web-app-capable", "yes");
+                upsertMeta("apple-mobile-web-app-title", "NomNom Stories");
+                upsertMeta("mobile-web-app-capable", "yes");
+
+                docRef.title = "NomNom Stories";
+            }})();
+            </script>
+            """,
+            height=0,
+        )
+    except Exception:
+        pass
+
+inject_app_icons()
 def get_bg_music_b64():
     try:
         with open("bg_music.mp3", "rb") as f:
