@@ -32,6 +32,11 @@ def get_bg_music_html():
         return ""
 
 
+def short_story_title(title, max_len=24):
+    title = (title or "Сказка").replace("\n", " ").strip()
+    return title if len(title) <= max_len else title[:max_len - 1] + "…"
+
+
 lang_dict = {
     "Русский": {
         "title": "✨ NomNom Stories",
@@ -157,20 +162,33 @@ else:
 
         st.success(f"Аккаунт: {st.session_state.user_email}")
 
-        with st.expander(T["sidebar_library"]):
+        with st.expander(T["sidebar_library"], expanded=True):
             stories = get_user_stories(st.session_state.user_email)
+
             for s in stories.data:
-                col_story, col_del = st.columns([4, 1])
+                full_title = s.get("title") or "Сказка"
+                short_title = short_story_title(full_title)
+
+                col_story, col_del = st.columns([6, 1], gap="small")
 
                 with col_story:
-                    if st.button(s.get("title") or "Сказка", key=f"s_{s['id']}", use_container_width=True):
+                    if st.button(
+                        short_title,
+                        key=f"s_{s['id']}",
+                        use_container_width=True,
+                        help=full_title
+                    ):
                         st.session_state.view_story = s
                         st.rerun()
 
                 with col_del:
-                    if st.button("🗑️", key=f"del_{s['id']}", help="Удалить"):
+                    if st.button("🗑", key=f"del_{s['id']}", help="Удалить"):
                         if delete_story(s["id"]):
-                            st.session_state.view_story = None
+                            if (
+                                st.session_state.view_story
+                                and st.session_state.view_story.get("id") == s["id"]
+                            ):
+                                st.session_state.view_story = None
                             st.rerun()
 
         st.divider()
@@ -266,7 +284,12 @@ else:
             )
 
             st.markdown('<div class="section-label">🎯 Навык или тема</div>', unsafe_allow_html=True)
-            skills = st.multiselect(T["skills_label"], T["skills"], default=[T["skills"][0]], label_visibility="collapsed")
+            skills = st.multiselect(
+                T["skills_label"],
+                T["skills"],
+                default=[T["skills"][0]],
+                label_visibility="collapsed"
+            )
 
             st.markdown('<div class="section-label">🎧 Формат</div>', unsafe_allow_html=True)
             c1, c2 = st.columns(2)
