@@ -45,3 +45,11 @@ def update_audio(story_id, audio_b64):
     except Exception as e:
         print(f"Ошибка в update_audio: {e}")
         return None
+
+def delete_story(story_id):
+    try:
+        supabase.table("stories").delete().eq("id", story_id).execute()
+        return True
+    except Exception as e:
+        print(f"Ошибка при удалении: {e}")
+        return False
