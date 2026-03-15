@@ -118,11 +118,11 @@ def mount_bg_music():
                 docRef.body.appendChild(bg);
             }}
 
-            bg.volume = 0.18;
+            bg.volume = 0.25;
 
             function startBg() {{
                 try {{
-                    bg.volume = 0.18;
+                    bg.volume = 0.25;
                     const p = bg.play();
                     if (p) p.catch(() => {{}});
                 }} catch (e) {{}}
