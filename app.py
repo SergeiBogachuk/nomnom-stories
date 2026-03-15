@@ -139,33 +139,50 @@ else:
 
             details = st.text_area(T['details'])
 
-            if st.button(T['btn_create'], type="primary", use_container_width=True):
+           if st.button(T['btn_create'], type="primary", use_container_width=True):
                 with st.spinner("✨ Колдуем..."):
                     try:
+                        # 1. Сначала ВСЕГДА генерируем текст сказки
                         txt = generate_story_text(cn, st.session_state.sel_lang, skills, details, st.session_state.time_val)
-                        if txt:
-                            ttl = txt.split('\n')[0].strip()
-                            url = generate_image(ttl) if (not use_audio and use_img) else None
+                        
+                        if not txt:
+                            st.error("Ошибка: Текст не создан")
+                            st.stop()
                             
-                            res = save_story({
-                                "user_email": st.session_state.user_email, 
-                                "child_name": cn, 
-                                "title": ttl, 
-                                "story_text": txt, 
-                                "image_url": url
-                            })
+                        ttl = txt.split('\n')[0].strip()
+                        
+                        # 2. Картинка — генерируем, если стоит галочка "Текст + Картинка"
+                        # (Даже если выбрано аудио, текст и картинка теперь могут быть вместе)
+                        url = None
+                        if use_img:
+                            url = generate_image(ttl)
+                        
+                        # 3. Сохраняем в базу (Текст теперь точно попадет в колонку story_text)
+                        new_story_data = {
+                            "user_email": st.session_state.user_email,
+                            "child_name": cn,
+                            "title": ttl,
+                            "story_text": txt, # Текст сохраняется ВСЕГДА
+                            "image_url": url
+                        }
+                        
+                        res = save_story(new_story_data)
+                        
+                        if res and len(res.data) > 0:
+                            current_story = res.data[0]
+                            new_id = current_story['id']
                             
-                            if res and len(res.data) > 0:
-                                new_id = res.data[0]['id']
-                                current_story = res.data[0]
-                                
-                                if use_audio:
+                            # 4. Если выбрано аудио — добавляем его вторым шагом
+                            if use_audio:
+                                with st.spinner("🔊 Озвучиваем..."):
                                     audio_b64 = get_speech_b64(txt, voice_id)
                                     if audio_b64:
                                         update_audio(new_id, audio_b64)
                                         current_story['audio_base64'] = audio_b64
-                                
-                                st.session_state.view_story = current_story
-                                st.rerun()
+                            
+                            # Сразу показываем готовую сказку (с текстом!)
+                            st.session_state.view_story = current_story
+                            st.rerun()
+                            
                     except Exception as e: 
                         st.error(f"Ошибка: {e}")
