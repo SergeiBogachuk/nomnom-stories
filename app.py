@@ -112,6 +112,7 @@ if not st.session_state.get("logged_in", False):
     with center:
         st.markdown(
             """
+            <div class="hero-badge">🌟 Добро пожаловать</div>
             <div class="hero-title">🌙 NomNom Stories</div>
             <div class="hero-subtitle">Вход в волшебную библиотеку сказок ✨</div>
             """,
@@ -141,6 +142,19 @@ else:
     T = lang_dict[st.session_state.sel_lang]
 
     with st.sidebar:
+        try:
+            st.image("logo.jpg", width=88)
+        except:
+            pass
+
+        st.markdown(
+            """
+            <div class="sidebar-brand">🌙 NomNom Stories</div>
+            <div class="sidebar-subbrand">Сказки на ночь для детей</div>
+            """,
+            unsafe_allow_html=True
+        )
+
         st.success(f"Аккаунт: {st.session_state.user_email}")
 
         with st.expander(T["sidebar_library"]):
@@ -161,23 +175,32 @@ else:
 
         st.divider()
 
+        st.markdown('<div class="section-label">🎙 Настройки голоса</div>', unsafe_allow_html=True)
         voice_name = st.selectbox(T["sidebar_voice"], list(T["voices"].keys()))
         voice_id = T["voices"][voice_name]
 
-        if st.button(T["sidebar_new"], use_container_width=True):
+        if st.button(T["sidebar_new"], use_container_width=True, type="primary"):
             st.session_state.view_story = None
             st.rerun()
 
     if st.session_state.view_story:
         s = st.session_state.view_story
 
-        st.markdown(
-            f"""
-            <div class="hero-title" style="font-size: 2.4rem;">📖 {html.escape(s.get('title', 'Сказка'))}</div>
-            <div class="hero-subtitle">{subtitle_dict[st.session_state.sel_lang]}</div>
-            """,
-            unsafe_allow_html=True
-        )
+        top1, top2 = st.columns([1, 6])
+        with top1:
+            if st.button("← Назад", use_container_width=True):
+                st.session_state.view_story = None
+                st.rerun()
+
+        with top2:
+            st.markdown(
+                f"""
+                <div class="hero-badge">📖 Готовая сказка</div>
+                <div class="hero-title" style="font-size: 2.35rem;">{html.escape(s.get('title', 'Сказка'))}</div>
+                <div class="hero-subtitle">{subtitle_dict[st.session_state.sel_lang]}</div>
+                """,
+                unsafe_allow_html=True
+            )
 
         components.html(get_bg_music_html(), height=0)
 
@@ -194,8 +217,10 @@ else:
             safe_story = html.escape(story_text).replace("\n", "<br>")
             st.markdown(
                 f"""
-                <div class="story-output">
-                    {safe_story}
+                <div class="story-shell">
+                    <div class="story-output">
+                        {safe_story}
+                    </div>
                 </div>
                 """,
                 unsafe_allow_html=True
@@ -209,38 +234,48 @@ else:
         with center:
             st.markdown(
                 f"""
+                <div class="hero-badge">🌟 Детские сказки на ночь</div>
                 <div class="hero-title">🌙 NomNom Stories</div>
                 <div class="hero-subtitle">{subtitle_dict[st.session_state.sel_lang]}</div>
                 """,
                 unsafe_allow_html=True
             )
 
+            st.markdown('<div class="section-label">👶 Для кого сказка?</div>', unsafe_allow_html=True)
             cn = st.text_input(T["child_name"], value="Даша")
 
+            st.markdown('<div class="section-label">🌍 Язык истории</div>', unsafe_allow_html=True)
             lang_list = list(lang_dict.keys())
             new_lang = st.selectbox(
                 "🌍 Language / Язык",
                 lang_list,
                 index=lang_list.index(st.session_state.sel_lang),
-                key="lang_selector_center"
+                key="lang_selector_center",
+                label_visibility="collapsed"
             )
 
             if new_lang != st.session_state.sel_lang:
                 st.session_state.sel_lang = new_lang
                 st.rerun()
 
-            st.info(f"📍 {T['title']} - {st.session_state.sel_lang}")
+            st.markdown(
+                f"""
+                <div class="soft-info-chip">📍 {T['title']} • {st.session_state.sel_lang}</div>
+                """,
+                unsafe_allow_html=True
+            )
 
-            skills = st.multiselect(T["skills_label"], T["skills"], default=[T["skills"][0]])
+            st.markdown('<div class="section-label">🎯 Навык или тема</div>', unsafe_allow_html=True)
+            skills = st.multiselect(T["skills_label"], T["skills"], default=[T["skills"][0]], label_visibility="collapsed")
 
+            st.markdown('<div class="section-label">🎧 Формат</div>', unsafe_allow_html=True)
             c1, c2 = st.columns(2)
             with c1:
                 use_img = st.checkbox(T["opt_img"], value=True)
             with c2:
                 use_audio = st.checkbox(T["opt_audio"], value=False)
 
-            st.write(T["duration"])
-
+            st.markdown('<div class="section-label">⏳ Длительность</div>', unsafe_allow_html=True)
             t_cols = st.columns(3)
             for i, t in enumerate([3, 5, 10]):
                 if t_cols[i].button(
@@ -252,7 +287,8 @@ else:
                     st.session_state.time_val = t
                     st.rerun()
 
-            details = st.text_area(T["details"])
+            st.markdown('<div class="section-label">✍️ Детали сюжета</div>', unsafe_allow_html=True)
+            details = st.text_area(T["details"], label_visibility="collapsed")
 
             if st.button(T["btn_create"], type="primary", use_container_width=True):
                 with st.spinner("✨ Колдуем..."):
