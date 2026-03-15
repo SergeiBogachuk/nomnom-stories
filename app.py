@@ -349,11 +349,7 @@ else:
                 <div class="hero-subtitle">{subtitle_dict[st.session_state.sel_lang]}</div>
                 """,
                 unsafe_allow_html=True
-            )
-
-            st.markdown('<div class="mobile-library-title">📚 Мои сказки</div>', unsafe_allow_html=True)
-            with st.expander("Открыть библиотеку сказок", expanded=False):
-                render_story_library(stories, prefix="main")
+            )  
 
             st.markdown('<div class="section-label">👶 Для кого сказка?</div>', unsafe_allow_html=True)
             cn = st.text_input(T["child_name"], value="Даша")
