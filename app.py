@@ -14,13 +14,7 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 apply_styles()
-st.set_page_config(
-    page_title="NomNom Stories",
-    page_icon="🌙",
-    layout="wide",
-    initial_sidebar_state="expanded"
-)
-apply_styles()
+
 
 def inject_app_icons():
     try:
@@ -83,12 +77,15 @@ def inject_app_icons():
     except Exception:
         pass
 
+
 inject_app_icons()
+
+
 def get_bg_music_b64():
     try:
         with open("bg_music.mp3", "rb") as f:
             return base64.b64encode(f.read()).decode()
-    except:
+    except Exception:
         return None
 
 
@@ -174,19 +171,19 @@ def stop_bg_music():
     )
 
 
-def short_story_title(title, max_len=24):
-    title = (title or "Сказка").replace("\n", " ").strip()
+def short_story_title(title, fallback_title="Story", max_len=24):
+    title = (title or fallback_title).replace("\n", " ").strip()
     return title if len(title) <= max_len else title[:max_len - 1] + "…"
 
 
-def render_story_library(stories, prefix="lib"):
+def render_story_library(stories, T, prefix="lib"):
     if not stories or not getattr(stories, "data", None):
-        st.caption("Пока нет сохранённых сказок")
+        st.caption(T["no_saved_stories"])
         return
 
     for s in stories.data:
-        full_title = s.get("title") or "Сказка"
-        short_title = short_story_title(full_title)
+        full_title = s.get("title") or T["story_fallback"]
+        short_title = short_story_title(full_title, T["story_fallback"])
 
         col_story, col_del = st.columns([6, 1], gap="small")
 
@@ -202,7 +199,7 @@ def render_story_library(stories, prefix="lib"):
                 st.rerun()
 
         with col_del:
-            if st.button("🗑", key=f"{prefix}_del_{s['id']}", help="Удалить"):
+            if st.button("🗑", key=f"{prefix}_del_{s['id']}", help=T["delete_help"]):
                 if delete_story(s["id"]):
                     if (
                         st.session_state.view_story
@@ -217,8 +214,10 @@ lang_dict = {
     "Русский": {
         "title": "✨ NomNom Stories",
         "child_name": "Имя ребенка",
+        "default_child_name": "Даша",
         "skills_label": "🎯 Чему научим сегодня?",
         "duration": "⏳ Длительность:",
+        "duration_btn_suffix": "min",
         "details": "✍️ О чем будет сказка?",
         "btn_create": "🚀 СОЗДАТЬ МАГИЮ ✨",
         "sidebar_library": "📚 Мои сказки",
@@ -226,21 +225,38 @@ lang_dict = {
         "sidebar_new": "➕ Новая сказка",
         "opt_img": "🎨 Текст + Картинка",
         "opt_audio": "🎧 Только Аудио",
-        "voices": {
-            "Марина": "ymDCYd8puC7gYjxIamPt",
-            "Николай": "8JVbfL6oEdmuxKn5DK2C",
-            "Алиса": "EXAVITQu4vr4xnSDxMaL"
-        },
-        "skills": [
-            "Честность", "Смелость", "Доброта", "Трудолюбие",
-            "Вежливость", "Гигиена", "Дружба", "Усидчивость"
-        ]
+        "account_label": "Аккаунт",
+        "sidebar_tagline": "Сказки на ночь для детей",
+        "voice_settings": "🎙 Настройки голоса",
+        "ready_story": "📖 Готовая сказка",
+        "back_btn": "← Назад",
+        "empty_story_text": "Текст сказки пустой или не сохранился.",
+        "no_saved_stories": "Пока нет сохранённых сказок",
+        "section_for_whom": "👶 Для кого сказка?",
+        "section_language": "🌍 Язык истории",
+        "section_skill": "🎯 Навык или тема",
+        "section_format": "🎧 Формат",
+        "section_duration": "⏳ Длительность",
+        "section_details": "✍️ Детали сюжета",
+        "spinner_magic": "✨ Колдуем...",
+        "spinner_voice": "🔊 Озвучиваем...",
+        "error_save_story": "Не удалось сохранить сказку.",
+        "error_gen_story": "Не удалось сгенерировать текст сказки.",
+        "story_fallback": "Сказка",
+        "delete_help": "Удалить",
+        "error_prefix": "Ошибка",
+        "login_badge": "🌟 Добро пожаловать",
+        "login_subtitle": "Вход в волшебную библиотеку сказок ✨",
+        "login_btn": "Войти",
+        "login_error": "Ошибка входа"
     },
     "English": {
         "title": "✨ NomNom Stories",
         "child_name": "Child's Name",
+        "default_child_name": "Emma",
         "skills_label": "🎯 What to teach today?",
         "duration": "⏳ Duration:",
+        "duration_btn_suffix": "min",
         "details": "✍️ What is the story about?",
         "btn_create": "🚀 CREATE MAGIC ✨",
         "sidebar_library": "📚 My Stories",
@@ -248,35 +264,69 @@ lang_dict = {
         "sidebar_new": "➕ New Story",
         "opt_img": "🎨 Text + Image",
         "opt_audio": "🎧 Audio Only",
-        "voices": {
-            "Alice": "EXAVITQu4vr4xnSDxMaL",
-            "Nicholas": "8JVbfL6oEdmuxKn5DK2C"
-        },
-        "skills": [
-            "Honesty", "Bravery", "Kindness", "Hard work",
-            "Politeness", "Hygiene", "Friendship", "Patience"
-        ]
+        "account_label": "Account",
+        "sidebar_tagline": "Bedtime stories for children",
+        "voice_settings": "🎙 Voice settings",
+        "ready_story": "📖 Your story is ready",
+        "back_btn": "← Back",
+        "empty_story_text": "The story text is empty or was not saved.",
+        "no_saved_stories": "No saved stories yet",
+        "section_for_whom": "👶 Who is the story for?",
+        "section_language": "🌍 Story language",
+        "section_skill": "🎯 Skill or theme",
+        "section_format": "🎧 Format",
+        "section_duration": "⏳ Duration",
+        "section_details": "✍️ Story details",
+        "spinner_magic": "✨ Creating magic...",
+        "spinner_voice": "🔊 Generating voice...",
+        "error_save_story": "Failed to save the story.",
+        "error_gen_story": "Failed to generate the story text.",
+        "story_fallback": "Story",
+        "delete_help": "Delete",
+        "error_prefix": "Error",
+        "login_badge": "🌟 Welcome",
+        "login_subtitle": "Enter your magical bedtime stories library ✨",
+        "login_btn": "Log in",
+        "login_error": "Login failed"
     },
     "Română": {
         "title": "✨ NomNom Stories",
         "child_name": "Numele copilului",
+        "default_child_name": "Ana",
         "skills_label": "🎯 Ce învățăm astăzi?",
         "duration": "⏳ Durată:",
-        "details": "✍️ Despre ce va fi povesteа?",
+        "duration_btn_suffix": "min",
+        "details": "✍️ Despre ce va fi povestea?",
         "btn_create": "🚀 CREEAZĂ MAGIE ✨",
         "sidebar_library": "📚 Poveștile mele",
         "sidebar_voice": "🔊 Voce",
         "sidebar_new": "➕ Poveste nouă",
         "opt_img": "🎨 Text + Imagine",
         "opt_audio": "🎧 Doar Audio",
-        "voices": {
-            "Alina": "EXAVITQu4vr4xnSDxMaL",
-            "Marcel": "8JVbfL6oEdmuxKn5DK2C"
-        },
-        "skills": [
-            "Onestitate", "Curaj", "Bunătate", "Hărnicie",
-            "Politețe", "Igienă", "Prietenie", "Răbdare"
-        ]
+        "account_label": "Cont",
+        "sidebar_tagline": "Povești de noapte pentru copii",
+        "voice_settings": "🎙 Setări voce",
+        "ready_story": "📖 Povestea este gata",
+        "back_btn": "← Înapoi",
+        "empty_story_text": "Textul poveștii este gol sau nu a fost salvat.",
+        "no_saved_stories": "Încă nu există povești salvate",
+        "section_for_whom": "👶 Pentru cine este povestea?",
+        "section_language": "🌍 Limba poveștii",
+        "section_skill": "🎯 Abilitate sau temă",
+        "section_format": "🎧 Format",
+        "section_duration": "⏳ Durată",
+        "section_details": "✍️ Detalii ale poveștii",
+        "spinner_magic": "✨ Creăm magie...",
+        "spinner_voice": "🔊 Generăm vocea...",
+        "error_save_story": "Povestea nu a putut fi salvată.",
+        "error_gen_story": "Textul poveștii nu a putut fi generat.",
+        "story_fallback": "Poveste",
+        "delete_help": "Șterge",
+        "error_prefix": "Eroare",
+        "login_badge": "🌟 Bine ai venit",
+        "login_subtitle": "Intră în biblioteca magică de povești ✨",
+        "login_btn": "Autentificare",
+        "login_error": "Autentificare eșuată"
     }
 }
 
@@ -300,13 +350,15 @@ if "page_mode" not in st.session_state:
 if not st.session_state.get("logged_in", False):
     stop_bg_music()
 
+    L = lang_dict.get(st.session_state.get("sel_lang", "Русский"), lang_dict["Русский"])
+
     _, center, _ = st.columns([1, 2, 1])
     with center:
         st.markdown(
-            """
-            <div class="hero-badge">🌟 Добро пожаловать</div>
+            f"""
+            <div class="hero-badge">{L["login_badge"]}</div>
             <div class="hero-title">🌙 NomNom Stories</div>
-            <div class="hero-subtitle">Вход в волшебную библиотеку сказок ✨</div>
+            <div class="hero-subtitle">{L["login_subtitle"]}</div>
             """,
             unsafe_allow_html=True
         )
@@ -315,14 +367,14 @@ if not st.session_state.get("logged_in", False):
             e = st.text_input("Email")
             p = st.text_input("Пароль", type="password")
 
-            if st.form_submit_button("Войти", type="primary", use_container_width=True):
+            if st.form_submit_button(L["login_btn"], type="primary", use_container_width=True):
                 if check_user(e, p):
                     st.session_state.logged_in = True
                     st.session_state.user_email = e
                     st.session_state.page_mode = "form"
                     st.rerun()
                 else:
-                    st.error("Ошибка входа")
+                    st.error(L["login_error"])
 
 else:
     T = lang_dict[st.session_state.sel_lang]
@@ -331,25 +383,25 @@ else:
     with st.sidebar:
         try:
             st.image("logo.jpg", width=88)
-        except:
+        except Exception:
             pass
 
         st.markdown(
-            """
+            f"""
             <div class="sidebar-brand">🌙 NomNom Stories</div>
-            <div class="sidebar-subbrand">Сказки на ночь для детей</div>
+            <div class="sidebar-subbrand">{T["sidebar_tagline"]}</div>
             """,
             unsafe_allow_html=True
         )
 
-        st.success(f"Аккаунт: {st.session_state.user_email}")
+        st.success(f'{T["account_label"]}: {st.session_state.user_email}')
 
         with st.expander(T["sidebar_library"], expanded=False):
-            render_story_library(stories, prefix="side")
+            render_story_library(stories, T, prefix="side")
 
         st.divider()
 
-        st.markdown('<div class="section-label">🎙 Настройки голоса</div>', unsafe_allow_html=True)
+        st.markdown(f'<div class="section-label">{T["voice_settings"]}</div>', unsafe_allow_html=True)
         voice_name = st.selectbox(T["sidebar_voice"], list(T["voices"].keys()), key="voice_select")
         voice_id = T["voices"][voice_name]
 
@@ -365,7 +417,7 @@ else:
         top1, top2 = st.columns([1, 6])
 
         with top1:
-            if st.button("← Назад", use_container_width=True, key="back_story_btn"):
+            if st.button(T["back_btn"], use_container_width=True, key="back_story_btn"):
                 st.session_state.view_story = None
                 st.session_state.page_mode = "form"
                 st.rerun()
@@ -373,8 +425,8 @@ else:
         with top2:
             st.markdown(
                 f"""
-                <div class="hero-badge">📖 Готовая сказка</div>
-                <div class="hero-title" style="font-size: 2.35rem;">{html.escape(s.get('title', 'Сказка'))}</div>
+                <div class="hero-badge">{T["ready_story"]}</div>
+                <div class="hero-title" style="font-size: 2.35rem;">{html.escape(s.get('title', T["story_fallback"]))}</div>
                 <div class="hero-subtitle">{subtitle_dict[st.session_state.sel_lang]}</div>
                 """,
                 unsafe_allow_html=True
@@ -402,7 +454,7 @@ else:
                 unsafe_allow_html=True
             )
         else:
-            st.warning("Текст сказки пустой или не сохранился.")
+            st.warning(T["empty_story_text"])
 
     else:
         stop_bg_music()
@@ -412,17 +464,17 @@ else:
         with center:
             st.markdown(
                 f"""
-                <div class="hero-badge">🌟 Детские сказки на ночь</div>
+                <div class="hero-badge">🌟 NomNom Stories</div>
                 <div class="hero-title">🌙 NomNom Stories</div>
                 <div class="hero-subtitle">{subtitle_dict[st.session_state.sel_lang]}</div>
                 """,
                 unsafe_allow_html=True
-            )  
+            )
 
-            st.markdown('<div class="section-label">👶 Для кого сказка?</div>', unsafe_allow_html=True)
-            cn = st.text_input(T["child_name"], value="Даша")
+            st.markdown(f'<div class="section-label">{T["section_for_whom"]}</div>', unsafe_allow_html=True)
+            cn = st.text_input(T["child_name"], value=T["default_child_name"])
 
-            st.markdown('<div class="section-label">🌍 Язык истории</div>', unsafe_allow_html=True)
+            st.markdown(f'<div class="section-label">{T["section_language"]}</div>', unsafe_allow_html=True)
             lang_list = list(lang_dict.keys())
             new_lang = st.selectbox(
                 "🌍 Language / Язык",
@@ -443,7 +495,7 @@ else:
                 unsafe_allow_html=True
             )
 
-            st.markdown('<div class="section-label">🎯 Навык или тема</div>', unsafe_allow_html=True)
+            st.markdown(f'<div class="section-label">{T["section_skill"]}</div>', unsafe_allow_html=True)
             skills = st.multiselect(
                 T["skills_label"],
                 T["skills"],
@@ -451,18 +503,18 @@ else:
                 label_visibility="collapsed"
             )
 
-            st.markdown('<div class="section-label">🎧 Формат</div>', unsafe_allow_html=True)
+            st.markdown(f'<div class="section-label">{T["section_format"]}</div>', unsafe_allow_html=True)
             c1, c2 = st.columns(2)
             with c1:
                 use_img = st.checkbox(T["opt_img"], value=True, key="use_img_checkbox")
             with c2:
                 use_audio = st.checkbox(T["opt_audio"], value=False, key="use_audio_checkbox")
 
-            st.markdown('<div class="section-label">⏳ Длительность</div>', unsafe_allow_html=True)
+            st.markdown(f'<div class="section-label">{T["section_duration"]}</div>', unsafe_allow_html=True)
             t_cols = st.columns(3)
             for i, t in enumerate([3, 5, 10]):
                 if t_cols[i].button(
-                    f"{t} min",
+                    f'{t} {T["duration_btn_suffix"]}',
                     key=f"t_{t}",
                     type="primary" if st.session_state.time_val == t else "secondary",
                     use_container_width=True
@@ -470,11 +522,11 @@ else:
                     st.session_state.time_val = t
                     st.rerun()
 
-            st.markdown('<div class="section-label">✍️ Детали сюжета</div>', unsafe_allow_html=True)
+            st.markdown(f'<div class="section-label">{T["section_details"]}</div>', unsafe_allow_html=True)
             details = st.text_area(T["details"], label_visibility="collapsed")
 
             if st.button(T["btn_create"], type="primary", use_container_width=True, key="create_story_btn"):
-                with st.spinner("✨ Колдуем..."):
+                with st.spinner(T["spinner_magic"]):
                     try:
                         full_txt = generate_story_text(
                             cn,
@@ -488,7 +540,7 @@ else:
                             full_txt = full_txt.strip()
 
                             first_line, sep, rest = full_txt.partition("\n")
-                            ttl = first_line.strip() or "Сказка"
+                            ttl = first_line.strip() or T["story_fallback"]
                             story_body = rest.strip() if rest.strip() else full_txt
 
                             url = generate_image(ttl) if use_img else None
@@ -510,7 +562,7 @@ else:
                                 current_story["image_url"] = url
 
                                 if use_audio:
-                                    with st.spinner("🔊 Озвучиваем..."):
+                                    with st.spinner(T["spinner_voice"]):
                                         audio_b64 = get_speech_b64(story_body, voice_id)
                                         if audio_b64:
                                             update_audio(new_id, audio_b64)
@@ -520,9 +572,9 @@ else:
                                 st.session_state.page_mode = "view"
                                 st.rerun()
                             else:
-                                st.error("Не удалось сохранить сказку.")
+                                st.error(T["error_save_story"])
                         else:
-                            st.error("Не удалось сгенерировать текст сказки.")
+                            st.error(T["error_gen_story"])
 
                     except Exception as e:
-                        st.error(f"Ошибка: {e}")
+                        st.error(f'{T["error_prefix"]}: {e}')
