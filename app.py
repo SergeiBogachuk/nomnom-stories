@@ -122,7 +122,7 @@ def mount_bg_music():
 
             function startBg() {{
                 try {{
-                    bg.volume = 0.08;
+                    bg.volume = 0.18;
                     const p = bg.play();
                     if (p) p.catch(() => {{}});
                 }} catch (e) {{}}
