@@ -3,7 +3,17 @@ import streamlit as st
 def apply_styles():
     st.markdown("""
         <style>
-        /* ===== Общий фон ===== */
+[data-testid="stSidebar"] [data-testid="stExpander"] .stButton > button {
+    min-height: 44px !important;
+    height: 44px !important;
+}
+
+[data-testid="stSidebar"] [data-testid="stExpander"] button p {
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+}
+/* ===== Общий фон ===== */
         .stApp {
             background:
                 radial-gradient(circle at top, rgba(56, 189, 248, 0.16), transparent 30%),
