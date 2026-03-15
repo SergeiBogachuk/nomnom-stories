@@ -1,9 +1,11 @@
 import os
 from supabase import create_client
 
-# Инициализация Supabase
-SUPABASE_URL = os.environ.get("SUPABASE_URL", "")
-SUPABASE_KEY = os.environ.get("SUPABASE_KEY", "")
+# Твои данные подключения (прописаны напрямую, чтобы не было ошибок)
+SUPABASE_URL = "https://gdyhmeshafpdttzjpxjg.supabase.co"
+SUPABASE_KEY = "sb_publishable_aqJsR96WyEdflsb4LoQSzg_g2WEyWBd"
+
+# Инициализация клиента
 supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 class _EmptyResult:
@@ -26,17 +28,18 @@ def get_user_stories(email):
         return _EmptyResult()
 
 def save_story(story_data):
-    # Убираем аудио из данных, если оно там есть, чтобы не злить базу (ошибка PGRST204)
+    # Убираем аудио из данных перед первым сохранением (обход ошибки PGRST204)
     data_to_save = {k: v for k, v in story_data.items() if k != 'audio_base64'}
     try:
         res = supabase.table("stories").insert(data_to_save).execute()
         return res
     except Exception as e:
-        print(f"Ошибка в database.py: {e}")
+        print(f"Ошибка в save_story (database.py): {e}")
         return None
 
 def update_audio(story_id, audio_b64):
     try:
+        # Точечное обновление колонки аудио по ID сказки
         res = supabase.table("stories").update({"audio_base64": audio_b64}).eq("id", story_id).execute()
         return res
     except Exception as e:
