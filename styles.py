@@ -242,6 +242,47 @@ def apply_styles():
             background: rgba(30, 41, 59, 0.88) !important;
         }
 
+        /* ===== Expander: шапка "Мои сказки" ===== */
+        [data-testid="stExpander"] {
+            border: 1px solid rgba(125, 211, 252, 0.16) !important;
+            border-radius: 18px !important;
+            background: rgba(15, 23, 42, 0.35) !important;
+            overflow: hidden !important;
+        }
+
+        [data-testid="stExpander"] summary {
+            background: rgba(15, 23, 42, 0.78) !important;
+            border: 1px solid rgba(125, 211, 252, 0.18) !important;
+            border-radius: 14px !important;
+            padding-top: 0.2rem !important;
+            padding-bottom: 0.2rem !important;
+        }
+
+        [data-testid="stExpander"] summary:hover {
+            background: rgba(30, 41, 59, 0.92) !important;
+            border-color: rgba(125, 211, 252, 0.32) !important;
+        }
+
+        [data-testid="stExpander"] summary p,
+        [data-testid="stExpander"] summary span,
+        [data-testid="stExpander"] summary div {
+            color: #eef6ff !important;
+            opacity: 1 !important;
+        }
+
+        [data-testid="stExpander"] summary svg {
+            fill: #eef6ff !important;
+            color: #eef6ff !important;
+            stroke: #eef6ff !important;
+            opacity: 1 !important;
+        }
+
+        [data-testid="stExpander"] details[open] summary {
+            background: rgba(15, 23, 42, 0.88) !important;
+            border-color: rgba(125, 211, 252, 0.28) !important;
+            margin-bottom: 10px !important;
+        }
+
         /* ===== Блок библиотеки сказок в sidebar ===== */
         [data-testid="stSidebar"] [data-testid="stExpander"] .stButton button,
         [data-testid="stSidebar"] [data-testid="stExpander"] .stButton button[kind="secondary"],
@@ -279,6 +320,30 @@ def apply_styles():
             border-radius: 12px !important;
         }
 
+        /* ===== Блок библиотеки сказок в центре ===== */
+        [data-testid="stExpander"] .stButton button,
+        [data-testid="stExpander"] .stButton button[kind="secondary"],
+        [data-testid="stExpander"] .stButton button[kind="primary"] {
+            background: rgba(15, 23, 42, 0.96) !important;
+            color: #eef6ff !important;
+            border: 1px solid rgba(125, 211, 252, 0.22) !important;
+            border-radius: 14px !important;
+            box-shadow: none !important;
+        }
+
+        [data-testid="stExpander"] .stButton button:hover {
+            background: rgba(30, 41, 59, 0.98) !important;
+            color: #ffffff !important;
+            border-color: rgba(125, 211, 252, 0.40) !important;
+        }
+
+        [data-testid="stExpander"] .stButton button p,
+        [data-testid="stExpander"] .stButton button span,
+        [data-testid="stExpander"] .stButton button div {
+            color: #eef6ff !important;
+            opacity: 1 !important;
+        }
+
         /* ===== Info / success / alerts ===== */
         .stInfo, .stSuccess, .stWarning, .stError {
             border-radius: 18px !important;
@@ -287,13 +352,6 @@ def apply_styles():
 
         .stInfo {
             background: rgba(59, 130, 246, 0.15) !important;
-        }
-
-        /* ===== Expander ===== */
-        [data-testid="stExpander"] {
-            border: 1px solid rgba(125, 211, 252, 0.16) !important;
-            border-radius: 18px !important;
-            background: rgba(15, 23, 42, 0.35) !important;
         }
 
         /* ===== Разделители ===== */
