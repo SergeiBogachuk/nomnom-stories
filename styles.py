@@ -3,33 +3,7 @@ import streamlit as st
 def apply_styles():
     st.markdown("""
         <style>
-        /* Маленькая кнопка удаления */
-        [data-testid="stSidebar"] [data-testid="stExpander"] div[data-testid="column"]:last-child .stButton > button {
-            min-width: 44px !important;
-            width: 44px !important;
-            padding: 0 !important;
-            border-radius: 12px !important;
-        }
-
-        /* Библиотека сказок и в центре на мобильном */
-        .mobile-library-title {
-            margin-top: 12px;
-            margin-bottom: 8px;
-            font-size: 1rem;
-            font-weight: 700;
-            color: #eaf6ff !important;
-        }
-        [data-testid="stSidebar"] [data-testid="stExpander"] .stButton > button {
-    min-height: 44px !important;
-    height: 44px !important;
-}
-
-[data-testid="stSidebar"] [data-testid="stExpander"] button p {
-    white-space: nowrap !important;
-    overflow: hidden !important;
-    text-overflow: ellipsis !important;
-}
-/* ===== Общий фон ===== */
+        /* ===== Общий фон ===== */
         .stApp {
             background:
                 radial-gradient(circle at top, rgba(56, 189, 248, 0.16), transparent 30%),
@@ -162,6 +136,14 @@ def apply_styles():
             box-shadow: 0 10px 24px rgba(2, 8, 23, 0.14);
         }
 
+        .mobile-library-title {
+            margin-top: 12px;
+            margin-bottom: 8px;
+            font-size: 1rem;
+            font-weight: 700;
+            color: #eaf6ff !important;
+        }
+
         .story-shell {
             margin-top: 18px;
         }
@@ -260,6 +242,43 @@ def apply_styles():
             background: rgba(30, 41, 59, 0.88) !important;
         }
 
+        /* ===== Блок библиотеки сказок в sidebar ===== */
+        [data-testid="stSidebar"] [data-testid="stExpander"] .stButton button,
+        [data-testid="stSidebar"] [data-testid="stExpander"] .stButton button[kind="secondary"],
+        [data-testid="stSidebar"] [data-testid="stExpander"] .stButton button[kind="primary"] {
+            background: rgba(15, 23, 42, 0.96) !important;
+            color: #eef6ff !important;
+            border: 1px solid rgba(125, 211, 252, 0.22) !important;
+            border-radius: 14px !important;
+            box-shadow: none !important;
+            min-height: 44px !important;
+            height: 44px !important;
+        }
+
+        [data-testid="stSidebar"] [data-testid="stExpander"] .stButton button:hover {
+            background: rgba(30, 41, 59, 0.98) !important;
+            color: #ffffff !important;
+            border-color: rgba(125, 211, 252, 0.40) !important;
+        }
+
+        [data-testid="stSidebar"] [data-testid="stExpander"] .stButton button p,
+        [data-testid="stSidebar"] [data-testid="stExpander"] .stButton button span,
+        [data-testid="stSidebar"] [data-testid="stExpander"] .stButton button div {
+            color: #eef6ff !important;
+            white-space: nowrap !important;
+            overflow: hidden !important;
+            text-overflow: ellipsis !important;
+            opacity: 1 !important;
+            margin: 0 !important;
+        }
+
+        [data-testid="stSidebar"] [data-testid="stExpander"] div[data-testid="column"]:last-child .stButton button {
+            min-width: 44px !important;
+            width: 44px !important;
+            padding: 0 !important;
+            border-radius: 12px !important;
+        }
+
         /* ===== Info / success / alerts ===== */
         .stInfo, .stSuccess, .stWarning, .stError {
             border-radius: 18px !important;
@@ -344,47 +363,4 @@ def apply_styles():
             }
         }
         </style>
-            /* ===== Исправление кнопок списка сказок ===== */
-        [data-testid="stSidebar"] [data-testid="stExpander"] .stButton button,
-        [data-testid="stSidebar"] [data-testid="stExpander"] .stButton button[kind="secondary"],
-        [data-testid="stSidebar"] [data-testid="stExpander"] .stButton button[kind="primary"] {
-            background: rgba(15, 23, 42, 0.96) !important;
-            color: #eef6ff !important;
-            border: 1px solid rgba(125, 211, 252, 0.22) !important;
-            border-radius: 14px !important;
-            box-shadow: none !important;
-            min-height: 44px !important;
-            height: 44px !important;
-        }
-
-        [data-testid="stSidebar"] [data-testid="stExpander"] .stButton button:hover {
-            background: rgba(30, 41, 59, 0.98) !important;
-            color: #ffffff !important;
-            border-color: rgba(125, 211, 252, 0.40) !important;
-        }
-
-        [data-testid="stSidebar"] [data-testid="stExpander"] .stButton button p,
-        [data-testid="stSidebar"] [data-testid="stExpander"] .stButton button span,
-        [data-testid="stSidebar"] [data-testid="stExpander"] .stButton button div {
-            color: #eef6ff !important;
-            white-space: nowrap !important;
-            overflow: hidden !important;
-            text-overflow: ellipsis !important;
-            opacity: 1 !important;
-        }
-
-        [data-testid="stSidebar"] [data-testid="stExpander"] div[data-testid="column"]:last-child .stButton button {
-            min-width: 44px !important;
-            width: 44px !important;
-            padding: 0 !important;
-            border-radius: 12px !important;
-        }
-
-        .mobile-library-title {
-            margin-top: 12px;
-            margin-bottom: 8px;
-            font-size: 1rem;
-            font-weight: 700;
-            color: #eaf6ff !important;
-        }
-        """, unsafe_allow_html=True)
+    """, unsafe_allow_html=True)
