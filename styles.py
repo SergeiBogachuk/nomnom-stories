@@ -1,219 +1,245 @@
 import streamlit as st
 
+
 def apply_styles():
-    st.markdown("""
+    st.markdown(
+        """
         <style>
-        /* ===== Общий фон ===== */
+        @import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Manrope:wght@400;500;600;700;800&display=swap');
+
+        :root {
+            --bg-deep: #0f1727;
+            --bg-mid: #1b2640;
+            --surface: rgba(14, 24, 42, 0.78);
+            --surface-strong: rgba(10, 18, 33, 0.88);
+            --surface-soft: rgba(255, 248, 236, 0.08);
+            --line: rgba(255, 222, 173, 0.14);
+            --line-strong: rgba(255, 203, 129, 0.28);
+            --text-main: #fff9ef;
+            --text-soft: #eadfce;
+            --text-muted: #cdbda9;
+            --accent: #f4a261;
+            --accent-2: #e76f51;
+            --accent-3: #8ab17d;
+            --paper: #fffaf1;
+            --paper-text: #35271c;
+            --shadow-lg: 0 24px 70px rgba(6, 10, 18, 0.42);
+            --shadow-md: 0 14px 36px rgba(6, 10, 18, 0.24);
+            --radius-xl: 28px;
+            --radius-lg: 22px;
+            --radius-md: 18px;
+            --radius-sm: 14px;
+        }
+
+        html, body, [class*="css"] {
+            font-family: "Manrope", sans-serif;
+        }
+
         .stApp {
+            color: var(--text-main) !important;
             background:
-                radial-gradient(circle at top, rgba(56, 189, 248, 0.16), transparent 30%),
-                radial-gradient(circle at 20% 20%, rgba(99, 102, 241, 0.12), transparent 25%),
-                linear-gradient(rgba(5, 10, 24, 0.72), rgba(5, 10, 24, 0.84)),
-                url("https://images.unsplash.com/photo-1534796636912-3b95b3ab5986?q=80&w=2000&auto=format&fit=crop") !important;
-            background-size: cover !important;
-            background-attachment: fixed !important;
-            color: #f8fbff !important;
+                radial-gradient(circle at 15% 18%, rgba(244, 162, 97, 0.16), transparent 28%),
+                radial-gradient(circle at 82% 12%, rgba(138, 177, 125, 0.14), transparent 24%),
+                radial-gradient(circle at 50% 0%, rgba(255, 255, 255, 0.06), transparent 26%),
+                linear-gradient(180deg, #15233b 0%, #101928 48%, #0c1320 100%) !important;
+            position: relative;
         }
 
-        /* ===== Верхняя шапка Streamlit ===== */
+        .stApp::before {
+            content: "";
+            position: fixed;
+            inset: 0;
+            pointer-events: none;
+            background:
+                repeating-linear-gradient(
+                    135deg,
+                    rgba(255, 255, 255, 0.02) 0,
+                    rgba(255, 255, 255, 0.02) 2px,
+                    transparent 2px,
+                    transparent 18px
+                );
+            opacity: 0.22;
+        }
+
         header[data-testid="stHeader"] {
-            background: rgba(5, 10, 24, 0.08) !important;
-            backdrop-filter: blur(6px) !important;
+            background: rgba(12, 19, 32, 0.16) !important;
+            backdrop-filter: blur(8px) !important;
         }
 
-        /* ===== Кнопка открытия sidebar на мобильном ===== */
         [data-testid="collapsedControl"] {
             position: fixed !important;
-            top: 12px !important;
-            left: 12px !important;
+            top: 14px !important;
+            left: 14px !important;
             z-index: 999999 !important;
-            background: rgba(15, 23, 42, 0.96) !important;
-            border: 1px solid rgba(125, 211, 252, 0.26) !important;
-            border-radius: 12px !important;
-            box-shadow: 0 10px 24px rgba(2, 8, 23, 0.35) !important;
-            padding: 2px !important;
-        }
-
-        [data-testid="collapsedControl"]:hover {
-            background: rgba(30, 41, 59, 0.98) !important;
-            border-color: rgba(125, 211, 252, 0.42) !important;
+            background: rgba(15, 23, 39, 0.92) !important;
+            border: 1px solid var(--line-strong) !important;
+            border-radius: 14px !important;
+            box-shadow: var(--shadow-md) !important;
+            padding: 4px !important;
         }
 
         [data-testid="collapsedControl"] svg,
         [data-testid="collapsedControl"] path {
-            color: #eef6ff !important;
-            fill: #eef6ff !important;
-            stroke: #eef6ff !important;
-            opacity: 1 !important;
+            color: var(--text-main) !important;
+            fill: var(--text-main) !important;
+            stroke: var(--text-main) !important;
         }
 
-        /* ===== Основной контейнер ===== */
         [data-testid="block-container"] {
-            max-width: 760px !important;
-            margin-top: 24px !important;
-            margin-bottom: 40px !important;
-            padding: 2.2rem 2rem 2rem 2rem !important;
-            background: linear-gradient(180deg, rgba(10, 18, 40, 0.82), rgba(8, 15, 34, 0.72)) !important;
-            border: 1px solid rgba(125, 211, 252, 0.20) !important;
-            border-radius: 28px !important;
-            box-shadow:
-                0 20px 60px rgba(2, 8, 23, 0.45),
-                inset 0 1px 0 rgba(255, 255, 255, 0.06) !important;
-            backdrop-filter: blur(14px) !important;
+            max-width: 900px !important;
+            margin-top: 22px !important;
+            margin-bottom: 44px !important;
+            padding: 2.4rem 2.15rem 2.2rem 2.15rem !important;
+            background:
+                linear-gradient(180deg, rgba(18, 29, 49, 0.86), rgba(11, 19, 33, 0.8)) !important;
+            border: 1px solid var(--line) !important;
+            border-radius: var(--radius-xl) !important;
+            box-shadow: var(--shadow-lg) !important;
+            backdrop-filter: blur(16px) !important;
+            animation: riseIn 0.55s ease-out both;
         }
 
-        /* ===== Сайдбар ===== */
         [data-testid="stSidebar"] {
-            background: linear-gradient(180deg, rgba(6, 13, 31, 0.98), rgba(10, 20, 45, 0.96)) !important;
-            border-right: 1px solid rgba(56, 189, 248, 0.22) !important;
-            box-shadow: inset -1px 0 0 rgba(255,255,255,0.04) !important;
+            background:
+                linear-gradient(180deg, rgba(11, 19, 33, 0.96), rgba(14, 24, 42, 0.98)) !important;
+            border-right: 1px solid rgba(255, 203, 129, 0.14) !important;
+            box-shadow: inset -1px 0 0 rgba(255, 255, 255, 0.04) !important;
         }
 
         [data-testid="stSidebar"] .stAlert {
-            border-radius: 18px !important;
-            border: 1px solid rgba(125, 211, 252, 0.20) !important;
-            background: rgba(34, 197, 94, 0.14) !important;
+            border-radius: var(--radius-md) !important;
+            border: 1px solid rgba(138, 177, 125, 0.26) !important;
+            background: rgba(138, 177, 125, 0.14) !important;
+            color: var(--text-main) !important;
         }
 
-        [data-testid="stSidebar"] .stButton > button {
-            height: 46px !important;
-        }
-
-        [data-testid="stSidebar"] .stSelectbox label,
-        [data-testid="stSidebar"] .stCheckbox label {
-            font-weight: 700 !important;
-        }
-
-        /* ===== Заголовки ===== */
-        h1 {
-            text-align: center !important;
-            font-size: 3rem !important;
-            line-height: 1.1 !important;
-            margin-bottom: 0.35rem !important;
-            color: #ffffff !important;
-            font-weight: 800 !important;
-            letter-spacing: -0.03em !important;
-        }
-
-        h2, h3 {
-            color: #f8fbff !important;
-            font-weight: 700 !important;
+        h1, h2, h3 {
+            color: var(--text-main) !important;
+            font-family: "Fraunces", serif !important;
+            letter-spacing: -0.02em !important;
         }
 
         .hero-title {
             text-align: center;
-            font-size: 3rem;
-            font-weight: 800;
-            line-height: 1.05;
-            margin-bottom: 0.35rem;
-            color: #ffffff;
-            text-shadow: 0 0 24px rgba(125, 211, 252, 0.18);
+            font-family: "Fraunces", serif;
+            font-size: 3.1rem;
+            font-weight: 700;
+            line-height: 1.02;
+            margin-bottom: 0.55rem;
+            color: var(--text-main);
+            text-wrap: balance;
+        }
+
+        .story-title {
+            font-size: 2.5rem;
         }
 
         .hero-subtitle {
             text-align: center;
-            font-size: 1rem;
-            color: #dbeafe;
-            opacity: 0.92;
-            margin-bottom: 1.6rem;
+            font-size: 1.02rem;
+            line-height: 1.7;
+            color: var(--text-soft);
+            max-width: 640px;
+            margin: 0 auto 1.4rem auto;
         }
 
         .hero-badge {
             width: fit-content;
-            margin: 0 auto 12px auto;
-            padding: 8px 14px;
+            margin: 0 auto 14px auto;
+            padding: 9px 16px;
             border-radius: 999px;
-            background: rgba(56, 189, 248, 0.12);
-            border: 1px solid rgba(125, 211, 252, 0.24);
-            color: #dff4ff;
+            border: 1px solid var(--line-strong);
+            background: linear-gradient(135deg, rgba(244, 162, 97, 0.14), rgba(255, 248, 236, 0.08));
+            color: #fff4e8;
             font-size: 0.92rem;
             font-weight: 700;
             letter-spacing: 0.01em;
-            box-shadow: 0 8px 24px rgba(2, 8, 23, 0.12);
+            box-shadow: 0 10px 24px rgba(14, 24, 42, 0.16);
+            animation: glowPulse 3.2s ease-in-out infinite;
         }
 
         .sidebar-brand {
-            font-size: 1.25rem;
-            font-weight: 800;
-            color: #ffffff;
-            margin-top: 6px;
-            margin-bottom: 2px;
+            font-family: "Fraunces", serif;
+            font-size: 1.32rem;
+            font-weight: 700;
+            color: var(--text-main);
+            margin-top: 8px;
+            margin-bottom: 6px;
         }
 
         .sidebar-subbrand {
-            font-size: 0.92rem;
-            color: #cfe8ff;
-            opacity: 0.85;
+            font-size: 0.94rem;
+            line-height: 1.6;
+            color: var(--text-soft);
             margin-bottom: 18px;
         }
 
         .section-label {
-            margin-top: 8px;
+            margin-top: 10px;
             margin-bottom: 8px;
             font-size: 0.98rem;
-            font-weight: 700;
-            color: #e9f6ff !important;
+            font-weight: 800;
             letter-spacing: 0.01em;
+            color: #fff4e8 !important;
         }
 
         .soft-info-chip {
             width: fit-content;
-            margin: 8px auto 16px auto;
-            padding: 10px 14px;
-            border-radius: 16px;
-            background: rgba(59, 130, 246, 0.16);
-            border: 1px solid rgba(125, 211, 252, 0.24);
-            color: #eaf6ff;
-            font-weight: 600;
-            box-shadow: 0 10px 24px rgba(2, 8, 23, 0.14);
-        }
-
-        .mobile-library-title {
-            margin-top: 12px;
-            margin-bottom: 8px;
-            font-size: 1rem;
+            margin: 12px auto 14px auto;
+            padding: 12px 16px;
+            border-radius: 18px;
+            background: linear-gradient(135deg, rgba(244, 162, 97, 0.18), rgba(138, 177, 125, 0.18));
+            border: 1px solid rgba(255, 203, 129, 0.24);
+            color: #fff7ef;
             font-weight: 700;
-            color: #eaf6ff !important;
+            box-shadow: 0 14px 28px rgba(6, 10, 18, 0.16);
+            text-align: center;
         }
 
-        .story-shell {
-            margin-top: 18px;
+        p, label, span, div {
+            color: var(--text-main);
         }
 
-        /* ===== Обычный текст ===== */
-        p, label, span {
-            color: #eef6ff !important;
+        .stCaptionContainer, .stCaptionContainer p {
+            color: var(--text-muted) !important;
+            line-height: 1.6 !important;
         }
 
-        .stMarkdown p {
-            color: #eef6ff !important;
+        div[data-testid="stForm"] {
+            border: 1px solid var(--line) !important;
+            border-radius: var(--radius-lg) !important;
+            padding: 1rem !important;
+            background: rgba(255, 248, 236, 0.05) !important;
         }
 
-        /* ===== Поля ввода ===== */
         div[data-baseweb="input"] > div,
         div[data-baseweb="select"] > div,
         .stTextArea textarea {
-            background: rgba(15, 23, 42, 0.82) !important;
-            border: 1px solid rgba(125, 211, 252, 0.20) !important;
-            border-radius: 18px !important;
-            color: #ffffff !important;
+            background: rgba(255, 248, 236, 0.08) !important;
+            border: 1px solid rgba(255, 203, 129, 0.18) !important;
+            border-radius: var(--radius-md) !important;
+            color: var(--text-main) !important;
             box-shadow:
-                inset 0 1px 0 rgba(255,255,255,0.04),
-                0 8px 28px rgba(2, 8, 23, 0.18) !important;
+                inset 0 1px 0 rgba(255, 255, 255, 0.04),
+                0 10px 28px rgba(6, 10, 18, 0.12) !important;
         }
 
         .stTextInput input,
         .stTextArea textarea {
-            color: #ffffff !important;
+            color: var(--text-main) !important;
+        }
+
+        .stTextInput input::placeholder,
+        .stTextArea textarea::placeholder {
+            color: rgba(234, 223, 206, 0.64) !important;
         }
 
         .stTextArea textarea {
-            min-height: 130px !important;
+            min-height: 150px !important;
         }
 
-        /* ===== Multiselect ===== */
         div[data-baseweb="tag"] {
-            background: linear-gradient(135deg, rgba(251, 113, 133, 0.95), rgba(239, 68, 68, 0.95)) !important;
+            background: linear-gradient(135deg, rgba(244, 162, 97, 0.95), rgba(231, 111, 81, 0.95)) !important;
             border-radius: 999px !important;
             border: none !important;
             color: white !important;
@@ -226,183 +252,125 @@ def apply_styles():
             color: white !important;
         }
 
-        /* ===== Чекбоксы ===== */
         .stCheckbox {
-            background: rgba(15, 23, 42, 0.68) !important;
+            background: rgba(255, 248, 236, 0.05) !important;
             padding: 14px 16px !important;
-            border-radius: 18px !important;
-            border: 1px solid rgba(125, 211, 252, 0.24) !important;
-            box-shadow: 0 8px 24px rgba(2, 8, 23, 0.18) !important;
+            border-radius: var(--radius-md) !important;
+            border: 1px solid rgba(255, 203, 129, 0.18) !important;
+            box-shadow: 0 10px 24px rgba(6, 10, 18, 0.12) !important;
+            transition: transform 0.2s ease, border-color 0.2s ease;
         }
 
         .stCheckbox:hover {
-            border-color: rgba(125, 211, 252, 0.40) !important;
             transform: translateY(-1px);
-            transition: 0.2s ease;
+            border-color: rgba(255, 203, 129, 0.34) !important;
         }
 
-        /* ===== Кнопки ===== */
         div.stButton > button {
-            border-radius: 18px !important;
-            height: 50px !important;
-            font-weight: 700 !important;
-            border: 1px solid rgba(125, 211, 252, 0.22) !important;
-            transition: all 0.2s ease !important;
+            border-radius: var(--radius-md) !important;
+            min-height: 50px !important;
+            font-weight: 800 !important;
+            border: 1px solid rgba(255, 203, 129, 0.18) !important;
+            transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease !important;
         }
 
         div.stButton > button[kind="primary"],
         button[kind="primaryFormSubmit"] {
-            background: linear-gradient(135deg, #38bdf8 0%, #2563eb 100%) !important;
-            border: none !important;
+            background: linear-gradient(135deg, var(--accent) 0%, var(--accent-2) 100%) !important;
             color: white !important;
-            box-shadow: 0 14px 32px rgba(37, 99, 235, 0.30) !important;
+            border: none !important;
+            box-shadow: 0 16px 34px rgba(231, 111, 81, 0.28) !important;
         }
 
         div.stButton > button[kind="primary"]:hover,
         button[kind="primaryFormSubmit"]:hover {
-            transform: translateY(-2px) scale(1.01) !important;
-            box-shadow: 0 18px 36px rgba(37, 99, 235, 0.38) !important;
+            transform: translateY(-2px);
+            box-shadow: 0 20px 38px rgba(231, 111, 81, 0.34) !important;
         }
 
         div.stButton > button[kind="secondary"] {
-            background: rgba(15, 23, 42, 0.72) !important;
-            color: #eff6ff !important;
+            background: rgba(255, 248, 236, 0.06) !important;
+            color: var(--text-main) !important;
         }
 
         div.stButton > button[kind="secondary"]:hover {
-            border-color: rgba(125, 211, 252, 0.45) !important;
-            background: rgba(30, 41, 59, 0.88) !important;
+            border-color: rgba(255, 203, 129, 0.34) !important;
+            background: rgba(255, 248, 236, 0.1) !important;
         }
 
-        /* ===== Expander: шапка "Мои сказки" ===== */
         [data-testid="stExpander"] {
-            border: 1px solid rgba(125, 211, 252, 0.16) !important;
-            border-radius: 18px !important;
-            background: rgba(15, 23, 42, 0.35) !important;
+            border: 1px solid rgba(255, 203, 129, 0.14) !important;
+            border-radius: var(--radius-md) !important;
+            background: rgba(255, 248, 236, 0.04) !important;
             overflow: hidden !important;
         }
 
         [data-testid="stExpander"] summary {
-            background: rgba(15, 23, 42, 0.78) !important;
-            border: 1px solid rgba(125, 211, 252, 0.18) !important;
-            border-radius: 14px !important;
-            padding-top: 0.2rem !important;
-            padding-bottom: 0.2rem !important;
+            background: rgba(255, 248, 236, 0.04) !important;
+            border-radius: var(--radius-sm) !important;
+            padding-top: 0.25rem !important;
+            padding-bottom: 0.25rem !important;
         }
 
         [data-testid="stExpander"] summary:hover {
-            background: rgba(30, 41, 59, 0.92) !important;
-            border-color: rgba(125, 211, 252, 0.32) !important;
+            background: rgba(255, 248, 236, 0.08) !important;
         }
 
-        [data-testid="stExpander"] summary p,
-        [data-testid="stExpander"] summary span,
-        [data-testid="stExpander"] summary div {
-            color: #eef6ff !important;
-            opacity: 1 !important;
-        }
-
-        [data-testid="stExpander"] summary svg {
-            fill: #eef6ff !important;
-            color: #eef6ff !important;
-            stroke: #eef6ff !important;
-            opacity: 1 !important;
-        }
-
-        [data-testid="stExpander"] details[open] summary {
-            background: rgba(15, 23, 42, 0.88) !important;
-            border-color: rgba(125, 211, 252, 0.28) !important;
-            margin-bottom: 10px !important;
-        }
-
-        /* ===== Блок библиотеки сказок в sidebar ===== */
         [data-testid="stSidebar"] [data-testid="stExpander"] .stButton button,
-        [data-testid="stSidebar"] [data-testid="stExpander"] .stButton button[kind="secondary"],
-        [data-testid="stSidebar"] [data-testid="stExpander"] .stButton button[kind="primary"] {
-            background: rgba(15, 23, 42, 0.96) !important;
-            color: #eef6ff !important;
-            border: 1px solid rgba(125, 211, 252, 0.22) !important;
-            border-radius: 14px !important;
+        [data-testid="stExpander"] .stButton button {
+            background: rgba(255, 248, 236, 0.06) !important;
+            color: var(--text-main) !important;
+            border: 1px solid rgba(255, 203, 129, 0.16) !important;
+            border-radius: var(--radius-sm) !important;
             box-shadow: none !important;
-            min-height: 44px !important;
-            height: 44px !important;
         }
 
-        [data-testid="stSidebar"] [data-testid="stExpander"] .stButton button:hover {
-            background: rgba(30, 41, 59, 0.98) !important;
-            color: #ffffff !important;
-            border-color: rgba(125, 211, 252, 0.40) !important;
+        [data-testid="stSidebar"] [data-testid="stExpander"] .stButton button:hover,
+        [data-testid="stExpander"] .stButton button:hover {
+            background: rgba(255, 248, 236, 0.1) !important;
+            border-color: rgba(255, 203, 129, 0.28) !important;
         }
 
         [data-testid="stSidebar"] [data-testid="stExpander"] .stButton button p,
         [data-testid="stSidebar"] [data-testid="stExpander"] .stButton button span,
         [data-testid="stSidebar"] [data-testid="stExpander"] .stButton button div {
-            color: #eef6ff !important;
             white-space: nowrap !important;
             overflow: hidden !important;
             text-overflow: ellipsis !important;
             opacity: 1 !important;
-            margin: 0 !important;
         }
 
         [data-testid="stSidebar"] [data-testid="stExpander"] div[data-testid="column"]:last-child .stButton button {
             min-width: 44px !important;
             width: 44px !important;
             padding: 0 !important;
-            border-radius: 12px !important;
         }
 
-        /* ===== Блок библиотеки сказок в центре ===== */
-        [data-testid="stExpander"] .stButton button,
-        [data-testid="stExpander"] .stButton button[kind="secondary"],
-        [data-testid="stExpander"] .stButton button[kind="primary"] {
-            background: rgba(15, 23, 42, 0.96) !important;
-            color: #eef6ff !important;
-            border: 1px solid rgba(125, 211, 252, 0.22) !important;
-            border-radius: 14px !important;
-            box-shadow: none !important;
-        }
-
-        [data-testid="stExpander"] .stButton button:hover {
-            background: rgba(30, 41, 59, 0.98) !important;
-            color: #ffffff !important;
-            border-color: rgba(125, 211, 252, 0.40) !important;
-        }
-
-        [data-testid="stExpander"] .stButton button p,
-        [data-testid="stExpander"] .stButton button span,
-        [data-testid="stExpander"] .stButton button div {
-            color: #eef6ff !important;
-            opacity: 1 !important;
-        }
-
-        /* ===== Info / success / alerts ===== */
         .stInfo, .stSuccess, .stWarning, .stError {
-            border-radius: 18px !important;
-            border: 1px solid rgba(125, 211, 252, 0.18) !important;
+            border-radius: var(--radius-md) !important;
+            border: 1px solid rgba(255, 203, 129, 0.16) !important;
         }
 
         .stInfo {
-            background: rgba(59, 130, 246, 0.15) !important;
+            background: rgba(244, 162, 97, 0.1) !important;
         }
 
-        /* ===== Разделители ===== */
-        hr {
-            border-color: rgba(125, 211, 252, 0.16) !important;
+        .story-shell {
+            margin-top: 18px;
         }
 
-        /* ===== Карточка сказки ===== */
         .story-output {
-            background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%) !important;
-            color: #1e293b !important;
-            padding: 30px !important;
-            border-radius: 24px !important;
-            font-size: 1.1rem !important;
-            line-height: 1.9 !important;
-            max-width: 900px !important;
+            background: linear-gradient(180deg, var(--paper) 0%, #fdf3e7 100%) !important;
+            color: var(--paper-text) !important;
+            padding: 32px !important;
+            border-radius: 26px !important;
+            font-size: 1.08rem !important;
+            line-height: 1.92 !important;
+            max-width: 920px !important;
             margin: 20px auto 0 auto !important;
             white-space: pre-wrap !important;
-            box-shadow: 0 18px 40px rgba(15, 23, 42, 0.18) !important;
+            box-shadow: 0 18px 40px rgba(9, 13, 22, 0.18) !important;
+            border: 1px solid rgba(244, 162, 97, 0.12) !important;
         }
 
         .story-output,
@@ -418,17 +386,15 @@ def apply_styles():
         .story-output h4,
         .story-output h5,
         .story-output h6 {
-            color: #1e293b !important;
-            font-weight: 400 !important;
+            color: var(--paper-text) !important;
+            font-weight: 500 !important;
         }
 
-        /* ===== Картинка сказки ===== */
         [data-testid="stImage"] img {
             border-radius: 24px !important;
-            box-shadow: 0 18px 40px rgba(2, 8, 23, 0.26) !important;
+            box-shadow: 0 20px 42px rgba(9, 13, 22, 0.24) !important;
         }
 
-        /* ===== Аудио ===== */
         audio {
             width: 100% !important;
             margin-top: 12px !important;
@@ -436,26 +402,56 @@ def apply_styles():
             border-radius: 16px !important;
         }
 
-        /* ===== Мобильная версия ===== */
+        hr {
+            border-color: rgba(255, 203, 129, 0.12) !important;
+        }
+
+        @keyframes riseIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes glowPulse {
+            0%, 100% {
+                box-shadow: 0 10px 24px rgba(14, 24, 42, 0.16);
+            }
+            50% {
+                box-shadow: 0 14px 30px rgba(244, 162, 97, 0.18);
+            }
+        }
+
         @media (max-width: 768px) {
             [data-testid="block-container"] {
-                padding: 1.25rem 1rem 1.25rem 1rem !important;
-                border-radius: 22px !important;
+                padding: 1.35rem 1rem 1.3rem 1rem !important;
+                border-radius: 24px !important;
                 margin-top: 10px !important;
             }
 
-            .hero-title, h1 {
-                font-size: 2.15rem !important;
+            .hero-title {
+                font-size: 2.35rem !important;
+            }
+
+            .story-title {
+                font-size: 2.05rem !important;
             }
 
             .hero-subtitle {
-                font-size: 0.95rem !important;
+                font-size: 0.96rem !important;
             }
 
-            [data-testid="collapsedControl"] {
-                top: 10px !important;
-                left: 10px !important;
+            .story-output {
+                padding: 22px !important;
+                font-size: 1rem !important;
+                line-height: 1.82 !important;
             }
         }
         </style>
-    """, unsafe_allow_html=True)
+        """,
+        unsafe_allow_html=True,
+    )
